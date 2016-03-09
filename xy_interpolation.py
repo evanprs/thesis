@@ -329,20 +329,17 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test'):
         else:
             os.system('ccx ' + name)
 
-        foundfile = False
-        failcounter = 0
-        while not foundfile:
-            try:  # TODO: this doesn't work - find out what's failing or just kill the shape
-                data = parse_dat(name + '.dat')
-                foundfile = True
-                totalSuccess = True
-            except:  # TODO: check the type of error
-                failcounter += 1
-                sleep(.1)  # wait for ccx to finish
-            if failcounter > 10:  # should not take this long
-                print('failed on', os.getcwd())
-                break
+        try: # TODO - tweak the intersection criteria so that this happens less
+            data = parse_dat(name + '.dat')
+            totalSuccess = True
+        except StopIteration:
+            # print('WARNING: failed on', os.getcwd())
+            # print('curve:')
+            # print(curve)
+            raise ValueError('Curve did not create a valid object')
+        os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         os.chdir('..')
+
 
     fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
     return fq, pf, mm
