@@ -323,11 +323,11 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test'):
         os.chdir(folder_path)
         make_inp()
         curve_to_fbd(curve, thickness, './' + name + '.fbd')
-        os.system('cgx -b ' + name + '.fbd')
+        os.system('cgx -b -bg ' + name + '.fbd >> test.log')
         if showshape:
-            os.system('ccx ' + name + ' ; cgx ' + name + '.frd ' + name + '.inp')
+            os.system('ccx ' + name + ' >> test.log ; cgx ' + name + '.frd ' + name + '.inp >> test.log')
         else:
-            os.system('ccx ' + name)
+            os.system('ccx ' + name + ' >> test.log')
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
