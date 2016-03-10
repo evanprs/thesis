@@ -323,9 +323,9 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test'):
         os.chdir(folder_path)
         make_inp()
         curve_to_fbd(curve, thickness, './' + name + '.fbd')
-        os.system('cgx -b -bg ' + name + '.fbd >> test.log')
+        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
-            os.system('ccx ' + name + ' >> test.log ; cgx ' + name + '.frd ' + name + '.inp >> test.log')
+            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
         else:
             os.system('ccx ' + name + ' >> test.log')
 
@@ -351,7 +351,13 @@ def fitness(fq_ideal, fq_actual):
     General fitness criteria. Defined here since different applications handle
     the data differently
     """
-    assert len(fq_ideal) == len(fq_actual)  # just in case
+    try:
+        assert len(fq_ideal) == len(fq_actual)  # just in case
+    except TypeError:
+        print fq_actual
+        print fq_ideal
+        print type(fq_actual)
+        print type(fq_ideal)
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return sum((fq_id - fq_ac) ** 2)
