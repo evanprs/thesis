@@ -3,6 +3,11 @@ import numpy
 from deap import algorithms, base, creator, tools
 from xy_interpolation import *
 
+THICKNESS = 6.35
+TARGET = np.array([.5,1.0,1.5,2.0])
+NUM_POINTS = 8
+POPULATION = 10
+NGEN = 10
 
 def evalOneMax(individual):
     return numpy.sum(individual[0]),
@@ -10,69 +15,75 @@ def evalOneMax(individual):
 def evalTestFreq(individual):
     try:
         s = make_shape(individual,max_output_len=50)
-        # plt.figure()
-        # plt.plot(s[0],s[1])
-        # plt.show()
-        fq, _, _ = find_eigenmodes(s, 5)
-        fit = fitness(fq[:4],np.array([.5,1.0,1.5,2.0])),
-        print('~~EVALUATING FITNESS~~')
-        print('fq =',fq[:4])
-        print('fitness = ',fit)
+        fq, _, _ = find_eigenmodes(s, THICKNESS)
+        fit = fitness(fq[:len(TARGET)],TARGET),
         return fit
     except ValueError:
         return (5000), # self-intersecting. very bad. TODO - how bad?
 
 
-def cxTwoPointCopy(ind1, ind2):
-    """Execute a two points crossover with copy on the input individuals. The
-    copy is required because the slicing in numpy returns a view of the data,
-    which leads to a self overwritting in the swap operation. It prevents
-    ::
-    
-        >>> import numpy
-        >>> a = numpy.array((1,2,3,4))
-        >>> b = numpy.array((5.6.7.8))
-        >>> a[1:3], b[1:3] = b[1:3], a[1:3]
-        >>> print(a)
-        [1 6 7 4]
-        >>> print(b)
-        [5 6 7 8]
-    """
-    size = len(ind1)
-    cxpoint1 = random.randint(1, size)
-    cxpoint2 = random.randint(1, size - 1)
-    if cxpoint2 >= cxpoint1:
-        cxpoint2 += 1
-    else: # Swap the two cx points
-        cxpoint1, cxpoint2 = cxpoint2, cxpoint1
 
-    ind1[cxpoint1:cxpoint2], ind2[cxpoint1:cxpoint2]         = ind2[cxpoint1:cxpoint2].copy(), ind1[cxpoint1:cxpoint2].copy()
+# def cxTwoPointCopy(ind1, ind2):
+#     """Execute a two points crossover with copy on the input individuals. The
+#     copy is required because the slicing in numpy returns a view of the data,
+#     which leads to a self overwritting in the swap operation. It prevents
+#     ::
+#         >>> import numpy
+#         >>> a = numpy.array((1,2,3,4))
+#         >>> b = numpy.array((5.6.7.8))
+#         >>> a[1:3], b[1:3] = b[1:3], a[1:3]
+#         >>> print(a)
+#         [1 6 7 4]
+#         >>> print(b)
+#         [5 6 7 8]
+#     """
+#     size = len(ind1)
+#     cxpoint1 = random.randint(1, size)
+#     cxpoint2 = random.randint(1, size - 1)
+#     if cxpoint2 >= cxpoint1:
+#         cxpoint2 += 1
+#     else: # Swap the two cx points
+#         cxpoint1, cxpoint2 = cxpoint2, cxpoint1
+#     ind1[cxpoint1:cxpoint2], ind2[cxpoint1:cxpoint2] = ind2[cxpoint1:cxpoint2].copy(), ind1[cxpoint1:cxpoint2].copy()
         
     return ind1, ind2
 
-
-
+def crossover_points(ind1,ind2):
+    """
+    Performs two-point crossover on the points of two individuals.
+    """
+    x1,y1 = ind1
+    x2,y2 = ind2
+    pts1 = zip(x1,y1)
+    pts2 = zip(x2,y2)
+    newpts1,newpts2 = tools.cxTwoPoint(pts1,pts2)
+    c1 = zip(*newpts1)
+    c2 = zip(*newpts2)
+    ind1 = creator.Individual(np.array(c1))
+    ind2 = creator.Individual(np.array(c2))
+    # TODO - check that datatypes don't get messed up here
+    return ind1, ind2
+    
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,)) 
 creator.create("Individual", numpy.ndarray, fitness=creator.FitnessMin)
 
-# TODO - add the thickness as a gene
 toolbox = base.Toolbox()
-toolbox.register("pts", lambda: make_random_shape(4, scale=400)[1]) 
+toolbox.register("pts", lambda: make_random_shape(NUM_POINTS, scale=400)[1]) 
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.pts)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
 toolbox.register("evaluate", evalTestFreq)
-toolbox.register("mate", cxTwoPointCopy)
+toolbox.register("mate", crossover_points)
 # TODO - set a scale for sigma
-toolbox.register("mutate", lambda i:tools.mutGaussian(i, mu=0.0, sigma=1.0, indpb=0.05))
+toolbox.register("mutate", lambda i:tools.mutGaussian(i, mu=0.0, sigma=400.0, indpb=0.05))
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 def main():
     random.seed(64)
     
-    pop = toolbox.population(n=10) # TODO - pick a good number
+    pop = toolbox.population(n=POPULATION) # TODO - pick a good number
     
     # Numpy equality function (operators.eq) between two arrays returns the
     # equality element wise, which raises an exception in the if similar()
@@ -87,7 +98,7 @@ def main():
     stats.register("max", numpy.max)
     
     # TODO - set ngen to something reasonable
-    algorithms.eaSimple(pop, toolbox, cxpb=0.90, mutpb=0.2, ngen=10, stats=stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, cxpb=0.90, mutpb=0.2, ngen=NGEN, stats=stats, halloffame=hof)
 
     return pop, stats, hof
 
