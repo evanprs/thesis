@@ -21,33 +21,6 @@ def evalTestFreq(individual):
     except ValueError:
         return (5000), # self-intersecting. very bad. TODO - how bad?
 
-
-
-# def cxTwoPointCopy(ind1, ind2):
-#     """Execute a two points crossover with copy on the input individuals. The
-#     copy is required because the slicing in numpy returns a view of the data,
-#     which leads to a self overwritting in the swap operation. It prevents
-#     ::
-#         >>> import numpy
-#         >>> a = numpy.array((1,2,3,4))
-#         >>> b = numpy.array((5.6.7.8))
-#         >>> a[1:3], b[1:3] = b[1:3], a[1:3]
-#         >>> print(a)
-#         [1 6 7 4]
-#         >>> print(b)
-#         [5 6 7 8]
-#     """
-#     size = len(ind1)
-#     cxpoint1 = random.randint(1, size)
-#     cxpoint2 = random.randint(1, size - 1)
-#     if cxpoint2 >= cxpoint1:
-#         cxpoint2 += 1
-#     else: # Swap the two cx points
-#         cxpoint1, cxpoint2 = cxpoint2, cxpoint1
-#     ind1[cxpoint1:cxpoint2], ind2[cxpoint1:cxpoint2] = ind2[cxpoint1:cxpoint2].copy(), ind1[cxpoint1:cxpoint2].copy()
-        
-    return ind1, ind2
-
 def crossover_points(ind1,ind2):
     """
     Performs two-point crossover on the points of two individuals.
@@ -61,7 +34,6 @@ def crossover_points(ind1,ind2):
     c2 = zip(*newpts2)
     ind1 = creator.Individual(np.array(c1))
     ind2 = creator.Individual(np.array(c2))
-    # TODO - check that datatypes don't get messed up here
     return ind1, ind2
     
 
