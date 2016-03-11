@@ -146,6 +146,15 @@ def make_shape(pts, max_output_len=100):
     fit_pts = interp(pts)
     if curve_intersects(fit_pts):
         raise ValueError("Curve is self-intersecting")
+
+    if PLOT_SHAPE:
+        plt.figure()
+        plt.plot(pts[0],pts[1], 'x')
+        plt.plot(fit_pts[0],fit_pts[1])
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.show()
+    
+    
     sparse_pts = tuple(map(lambda ls: ls[::len(fit_pts[0]) // max_output_len + 1], fit_pts))
     return sparse_pts
 
@@ -301,8 +310,7 @@ def parse_dat(path):
 
     return (fq, pf, mm)
 
-
-def find_eigenmodes(curve, thickness, showshape=False, name='test'):
+def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=False):
     '''
     Use the cgx/ccx FEM solver to find the eigenmodes of a plate
     Units of curve and thickness are in mm
@@ -319,10 +327,12 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test'):
     '''
     totalSuccess = False
     while not totalSuccess:
-        folder_path = smart_mkdir('./' + name + '')
+        folder_path = smart_mkdir(name)
         os.chdir(folder_path)
         make_inp()
-        curve_to_fbd(curve, thickness, './' + name + '.fbd')
+        with open(name + '.curve','w') as curvefile:
+            curvefile.write(str(curve))
+        curve_to_fbd(curve, thickness, name + '.fbd')
         os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
             os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
@@ -333,12 +343,14 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test'):
             data = parse_dat(name + '.dat')
             totalSuccess = True
         except StopIteration:
-            # print('WARNING: failed on', os.getcwd())
-            # print('curve:')
-            # print(curve)
+            os.chdir('..')
+            if not savedata:
+                os.system('rm -r '+folder_path) #BE VERY CAREFUL
             raise ValueError('Curve did not create a valid object')
         os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         os.chdir('..')
+        if not savedata:
+            os.system('rm -r '+folder_path) 
 
 
     fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
@@ -366,11 +378,13 @@ def fitness(fq_ideal, fq_actual):
 SHOW_STEPS = False
 SHOW_WINS = False
 SHOW_FAILS = False
+PLOT_SHAPE = True
 THICKNESS = 6.35  # 1/4 inch in mm
 
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)
-    fq, pf, mm = find_eigenmodes(s, THICKNESS)
+    # s = make_shape(     , max_output_len=50)
+    fq, pf, mm = find_eigenmodes(s, THICKNESS, showshape=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
