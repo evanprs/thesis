@@ -1,6 +1,7 @@
 from __future__ import print_function
 from xy_interpolation import *
 from scipy.optimize import fmin
+from random import random
 
 
 THICKNESS = 6.35  # 1/4 inch in mm
@@ -30,7 +31,9 @@ def evalFitness(flatpts, target, crosspenalty=100.0):
         fit = fitness(fq[:n_freq], target)
         return fit
     except ValueError:
-        return crosspenalty
+        # if you give a constant value, the algorithm thinks it's finished
+        # TODO - find something better
+        return crosspenalty * (random()+1)
 
 
 def findOptimumCurve(target, c0=None):
