@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from itertools import combinations
 import os
-from time import sleep
+from dxfwrite import DXFEngine as dxf
 
 
 def smart_mkdir(path):
@@ -241,6 +241,28 @@ def curve_to_fbd(curve, thick, fbd_filepath):
 # TODO - check a model against solidworks to make sure this works
 # This code provides the input parameters to run the simulation
 # Units:  Temp(K), Length(MM), Force(N), Density(10**3*KG/MM**3)
+
+def pts_to_dxf(pts, name='test.dxf'):
+    """
+    Takes a set of (x,y) points, interpolates the curve, then writes to dxf.
+    
+    Args:
+        curve: the (x,y) points to be converted. Do not duplicate endpoints
+        name: filename of output
+    """
+    curve = make_shape(pts, max_output_len=200)
+    assert len(curve[0]) == len(curve[1])
+    cpts = list(zip(*curve))
+    cpts.append(cpts[0]) # duplicate endpoints
+    n_pts = len(cpts)
+    drawing = dxf.drawing('test.dxf')
+    drawing.add_layer('LINES')
+    # build points
+    i = 0
+    while i < n_pts-1:
+        drawing.add(dxf.line(cpts[i], cpts[i+1], color=7, layer='LINES'))
+        i += 1
+    drawing.save()
 
 inptext = '''
 *include, input=all.msh
