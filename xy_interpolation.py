@@ -94,7 +94,7 @@ def curve_intersects(c, thresh=100):
     assert len(c[0]) > 10  # it'll give true by default if you start with a small list
 
     # Hacky fix - some self-intersections get lost if you don't break it up enough
-    cs = breakup(c, 3)
+    cs = breakup(c, 4)
     c_pairs = combinations(cs, r=2)  # try each combination
 
     if SHOW_FAILS:
@@ -159,7 +159,7 @@ def make_shape(pts, max_output_len=100):
     return sparse_pts
 
 
-def make_random_shape(n_pts, max_output_len=100, scale=500):
+def make_random_shape(n_pts, max_output_len=100, scale=500, circ=False):
     """ Interpolate a random shape out of n_pts starting points.
     Starts to take way too long for n_pts > 9
     
@@ -167,6 +167,7 @@ def make_random_shape(n_pts, max_output_len=100, scale=500):
         n_pts: number of points from which to interpolate the curve
         max_output_len: the max number of points in the interpolated curve
         scale: the range [0,scale] in which to randomly generate points
+        circ: if True, shape will be roughly circular
         
     Returns:
         fit_pts: a tuple (x,y) of the interpolated curve points
@@ -176,10 +177,18 @@ def make_random_shape(n_pts, max_output_len=100, scale=500):
     failcounter = 0
     while not valid_shape:
         try:
-            pts = rand_points(n_pts, scale)
-            fit_pts = make_shape(pts, max_output_len)
+            if circ:
+                thetas = rand_points(n_pts, scale=2*np.pi)[0]
+                thetas.sort()
+                rs = rand_points(n_pts, scale=scale/2)[0]+scale/2
+                xs = rs * np.cos(thetas)
+                ys = rs * np.sin(thetas)
+                pts = xs,ys
+                fit_pts = make_shape(pts,max_output_len)       
+            else:
+                pts = rand_points(n_pts, scale)
+                fit_pts = make_shape(pts, max_output_len)
             valid_shape = True
-            # print(str(failcounter) + ' fails')
             return fit_pts, pts
         except ValueError:
             failcounter += 1
@@ -400,8 +409,8 @@ def fitness(fq_ideal, fq_actual):
 SHOW_STEPS = False
 SHOW_WINS = False
 SHOW_FAILS = False
-PLOT_SHAPE = True
-THICKNESS = 6.35  # 1/4 inch in mm
+PLOT_SHAPE = False
+THICKNESS = 6.35/2  # 1/4 inch in mm
 
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)
