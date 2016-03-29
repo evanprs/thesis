@@ -4,11 +4,18 @@ from scipy.optimize import fmin
 from random import random
 
 
-THICKNESS = 6.35  # 1/4 inch in mm
-TARGET = np.array([0.5,1,1.2,1.5,2,2.5,2.667])
+THICKNESS = 6.35/2  # 1/4 inch in mm
+TARGET = np.array([0.22,0.44,0.528,0.66,0.88,1.1])*1000
+PLOT_CONVERGENCE = True
 
+def log_fit(fit):
+    try:
+        fits.append(fit)
+    except NameError:
+        global fits
+        fits = [fit]
 
-def evalFitness(flatpts, target, crosspenalty=100.0):
+def evalFitness(flatpts, target, crosspenalty=100.0*1000):
     """
     Fitness of points defining curve. Needs flattened points for use with fmin
 
@@ -29,10 +36,14 @@ def evalFitness(flatpts, target, crosspenalty=100.0):
         s = make_shape(pts, max_output_len=50)
         fq, _, _ = find_eigenmodes(s, THICKNESS)
         fit = fitness(fq[:n_freq], target)
+        print(fit)
+        if PLOT_CONVERGENCE:
+            log_fit(fit)
         return fit
     except ValueError:
         # if you give a constant value, the algorithm thinks it's finished
         # TODO - find something better
+        print('Curve broke the solver')
         return crosspenalty * (random()+1)
 
 
@@ -50,11 +61,12 @@ def findOptimumCurve(target, c0=None):
         _, c0 = make_random_shape(5, scale=200)
     x, y = c0
     flatpts = np.append(x, y)
-    outpts = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True, maxfun=3000, callback = print)
+    outpts = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True, ftol=.01 callback = print)
     x = outpts[:len(outpts) // 2]
     y = outpts[len(outpts) // 2:]
     optpts = (x, y)
     return optpts
+
 
 
 if __name__ == '__main__':
@@ -62,3 +74,8 @@ if __name__ == '__main__':
     print(optpts)
     # curve = make_shape(optpts, max_output_len=50)
     # print(find_eigenmodes(curve, THICKNESS, showshape=True)[0])
+    
+    if PLOT_CONVERGENCE:
+        plt.figure()
+        plt.plot(fits)
+        plt.show()
