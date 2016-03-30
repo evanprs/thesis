@@ -2,18 +2,11 @@ from __future__ import print_function
 from xy_interpolation import *
 from scipy.optimize import fmin
 from random import random
+import pickle
 
 
 THICKNESS = 6.35/2  # 1/4 inch in mm
 TARGET = np.array([0.22,0.44,0.528,0.66,0.88,1.1])*1000
-PLOT_CONVERGENCE = True
-
-def log_fit(fit):
-    try:
-        fits.append(fit)
-    except NameError:
-        global fits
-        fits = [fit]
 
 def evalFitness(flatpts, target, crosspenalty=100.0*1000):
     """
@@ -37,8 +30,7 @@ def evalFitness(flatpts, target, crosspenalty=100.0*1000):
         fq, _, _ = find_eigenmodes(s, THICKNESS)
         fit = fitness(fq[:n_freq], target)
         print(fit)
-        if PLOT_CONVERGENCE:
-            log_fit(fit)
+        fits.append(fit)
         return fit
     except ValueError:
         # if you give a constant value, the algorithm thinks it's finished
@@ -58,10 +50,18 @@ def findOptimumCurve(target, c0=None):
         optpts (tuple): points (x,y) defining optimized curve
     """
     if c0 == None:
-        _, c0 = make_random_shape(5, scale=200)
+        _, c0 = make_random_shape(10, scale=150, circ=True)
     x, y = c0
     flatpts = np.append(x, y)
-    outpts = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True, ftol=.01 callback = print)
+    
+    retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True,
+                     ftol=0.1, callback = print, retall=True)
+    retvals = list(retvals) # want want to append the fitness values
+    
+    retvals.append(fits)
+    pickle.dump(retvals, open('vals.p','wb')) # TODO - account for overwriting
+    
+    outpts = retvals[0]
     x = outpts[:len(outpts) // 2]
     y = outpts[len(outpts) // 2:]
     optpts = (x, y)
@@ -70,12 +70,8 @@ def findOptimumCurve(target, c0=None):
 
 
 if __name__ == '__main__':
+    fits = [] # TODO - crude, fix this 
     optpts = findOptimumCurve(TARGET)
     print(optpts)
     # curve = make_shape(optpts, max_output_len=50)
     # print(find_eigenmodes(curve, THICKNESS, showshape=True)[0])
-    
-    if PLOT_CONVERGENCE:
-        plt.figure()
-        plt.plot(fits)
-        plt.show()
