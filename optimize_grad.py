@@ -56,10 +56,12 @@ def findOptimumCurve(target, c0=None):
     
     retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True,
                      ftol=0.1, callback = print, retall=True)
-    retvals = list(retvals) # want want to append the fitness values
     
-    retvals.append(fits)
-    pickle.dump(retvals, open('vals.p','wb')) # TODO - account for overwriting
+    #  save the data for lata
+    labels = ['xopt','allvecs']
+    retdict = dict(zip(labels,retvals))
+    retdict['fits'] = fits
+    pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
     
     outpts = retvals[0]
     x = outpts[:len(outpts) // 2]
