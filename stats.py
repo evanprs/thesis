@@ -1,5 +1,5 @@
 from time import sleep
-import optimize_grad
+import optimize
 import pickle
 import matplotlib.pyplot as plt
 from xy_interpolation import make_shape
@@ -36,5 +36,6 @@ raw_input()
 plt.figure()
 plt.title('Fitness Convergence')
 plt.plot(fits)
+plt.yscale('log')
 plt.show()
 raw_input()
