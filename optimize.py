@@ -7,6 +7,7 @@ import pickle
 
 THICKNESS = 6.35/2  # 1/4 inch in mm
 TARGET = np.array([0.22,0.44,0.528,0.66,0.88,1.1])*1000
+METHOD = 'basinhopping' # options: simplex, basinhopping
 
 def evalFitness(flatpts, target, crosspenalty=100.0*1000):
     """
@@ -54,12 +55,19 @@ def findOptimumCurve(target, c0=None):
     x, y = c0
     flatpts = np.append(x, y)
     
-    retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True,
+    if METHOD == 'simplex':
+        retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True,
                      ftol=0.1, callback = print, retall=True)
+    elif METHOD == 'basinhopping':
+        res =  basinhopping(lambda pts: evalFitness(pts, target), flatpts,
+                     disp=True, callback = print)
+        retvals = res.x 
+    else: raise ValueError("Invalid method selected")
     
     #  save the data for lata
+    #  TODO - live update instead of waiting til end to write - better crash recovery
     labels = ['xopt','allvecs']
-    retdict = dict(zip(labels,retvals))
+    retdict = dict(zip(labels,retvals))  # automatically ignores allvecs if absent
     retdict['fits'] = fits
     pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
     
