@@ -23,7 +23,16 @@ plt.title('Development of Shape')
 ax = fig.add_subplot(111)
 line, = ax.plot(x0, y0, '-')
 marks, = ax.plot(x0, y0, 'x')
-for pts in allpts:    
+
+# remove duplicates
+keys = []
+cleanpts = []
+for pts in allpts:
+    if pts[0][0] not in keys:
+        cleanpts.append(pts)
+        keys.append(pts[0][0])
+
+for pts in cleanpts:    
     marks.set_xdata(pts[0])
     marks.set_ydata(pts[1])
     c = make_shape(pts)
