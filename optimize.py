@@ -1,6 +1,6 @@
 from __future__ import print_function
 from xy_interpolation import *
-from scipy.optimize import fmin
+from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
 
@@ -59,9 +59,14 @@ def findOptimumCurve(target, c0=None):
         retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, disp=True,
                      ftol=0.1, callback = print, retall=True)
     elif METHOD == 'basinhopping':
-        res =  basinhopping(lambda pts: evalFitness(pts, target), flatpts,
-                     disp=True, callback = print)
-        retvals = res.x 
+        def test(f_new, x_new, f_old, x_old):
+            c = (x_new[:len(x_new) // 2], x_new[len(x_new) // 2:])
+            return not curve_intersects(interp(c)) # check for intersection
+            # TODO - redundant - happens inside basinhopping anyways
+            
+        res =  basinhopping(lambda pts: evalFitness(pts, target), flatpts, T=1,
+                     accept_test= test, stepsize=200, disp=True, callback = print)
+        retvals = [res.x]
     else: raise ValueError("Invalid method selected")
     
     #  save the data for lata
