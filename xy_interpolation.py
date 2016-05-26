@@ -91,10 +91,10 @@ def curve_intersects(c, thresh=100):
     Works by recursing on bounding boxes.
     Thanks to the lovely Pomax for the method."""
     assert len(c[0]) == len(c[1])
-    assert len(c[0]) > 10  # it'll give true by default if you start with a small list
+    assert len(c[0]) > thresh*4  # it'll give true by default if you start with a small list
 
     # Hacky fix - some self-intersections get lost if you don't break it up enough
-    cs = breakup(c, 4)
+    cs = breakup(c, 3)
     c_pairs = combinations(cs, r=2)  # try each combination
 
     if SHOW_FAILS:
@@ -259,12 +259,12 @@ def pts_to_dxf(pts, name='test.dxf'):
         curve: the (x,y) points to be converted. Do not duplicate endpoints
         name: filename of output
     """
-    curve = make_shape(pts, max_output_len=200)
+    curve = make_shape(pts, max_output_len=300)
     assert len(curve[0]) == len(curve[1])
     cpts = list(zip(*curve))
     cpts.append(cpts[0]) # duplicate endpoints
     n_pts = len(cpts)
-    drawing = dxf.drawing('test.dxf')
+    drawing = dxf.drawing(name)
     drawing.add_layer('LINES')
     # build points
     i = 0
@@ -277,13 +277,13 @@ inptext = '''
 *include, input=all.msh
 *MATERIAL,NAME=Al
 *ELASTIC
-69000e6,0.3
+69000e6,0.33
 *DENSITY
 0.002712
 *SOLID SECTION,ELSET=Eall,MATERIAL=Al
 *STEP, PERTURBATION 
 *FREQUENCY
-20
+14
 *NODE PRINT,FREQUENCY=0
 *EL PRINT,FREQUENCY=0
 *NODE FILE
@@ -403,19 +403,18 @@ def fitness(fq_ideal, fq_actual):
         print type(fq_ideal)
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
-    return sum((fq_id - fq_ac) ** 2)
+    return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
 
 
 SHOW_STEPS = False
 SHOW_WINS = False
 SHOW_FAILS = False
 PLOT_SHAPE = False
-THICKNESS = 6.35/2  # 1/4 inch in mm
 
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)
     # s = make_shape(     , max_output_len=50)
-    fq, pf, mm = find_eigenmodes(s, THICKNESS, showshape=True)
+    fq, pf, mm = find_eigenmodes(s, 6.35, showshape=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
