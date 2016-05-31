@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from xy_interpolation import make_shape
 
 retdict = pickle.load(open('vals.p','rb'))
-xopt = retdict['xopt']
 allvecs = retdict['allvecs']
 fits = retdict['fits']
+fqs = retdict['fqs']
+target = retdict['target']
 allpts = []
 for vec in allvecs:
     x = vec[:len(vec) // 2]
@@ -16,30 +17,61 @@ for vec in allvecs:
 
 x0 = allpts[0][0]
 y0 = allpts[0][1]
+xmax = max(map(max, zip(*allpts)[0])) * 1.3
+xmin = min(map(min, zip(*allpts)[0])) * 1.3
+ymax = max(map(max, zip(*allpts)[1])) * 1.3
+ymin = min(map(min, zip(*allpts)[1])) * 1.3
+
+fq0 = fqs[0]
 
 plt.ion()
 fig = plt.figure()
-plt.title('Development of Shape')
-ax = fig.add_subplot(111)
-line, = ax.plot(x0, y0, '-')
-marks, = ax.plot(x0, y0, 'x')
+ax1 = fig.add_subplot(221)
+line1, = ax1.plot(x0, y0, '-')
+marks1, = ax1.plot(x0, y0, 'x')
+plt.xlabel('Position (mm)')
+plt.ylabel('Position (mm)')
+ax1.set_xlim([xmin,xmax])
+ax1.set_ylim([ymin,ymax])
+
+# add a freq plot
+ax2 = fig.add_subplot(222)
+line2, = ax2.plot(fq0, '-')
+marks2, = ax2.plot(target, '-')
+plt.xlabel('Overtone')
+plt.ylabel('Frequency (Hz)')
+ax2.set_ylim([min(target),max(target)])
+
+ax3 = fig.subplot(2,2,[3,4])
+
 
 # remove duplicates
 keys = []
-cleanpts = []
-for pts in allpts:
+cleanpts, cleanfqs = [], []
+for i, pts in enumerate(allpts):
     if pts[0][0] not in keys:
         cleanpts.append(pts)
         keys.append(pts[0][0])
+        cleanfqs.append(fqs[i])
 
-for pts in cleanpts:    
-    marks.set_xdata(pts[0])
-    marks.set_ydata(pts[1])
+frame = 0
+raw_input()
+
+for i, pts in enumerate(cleanpts):    
+    marks1.set_xdata(pts[0])
+    marks1.set_ydata(pts[1])
     c = make_shape(pts)
-    line.set_xdata(c[0])
-    line.set_ydata(c[1])    
+    line1.set_xdata(c[0])
+    line1.set_ydata(c[1])   
+    line2.set_ydata(cleanfqs[i])
+     
     plt.draw()
-    sleep(0.1)
+    
+    if frame % 10 == 0:
+        raw_input()
+    frame += 1
+
+    sleep(0.2)
     
 raw_input()
 plt.figure()
