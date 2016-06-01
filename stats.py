@@ -1,5 +1,4 @@
 from time import sleep
-import optimize
 import pickle
 import matplotlib.pyplot as plt
 from xy_interpolation import make_shape
@@ -26,7 +25,7 @@ fq0 = fqs[0]
 
 plt.ion()
 fig = plt.figure()
-ax1 = fig.add_subplot(221)
+ax1 = fig.add_subplot(121)
 line1, = ax1.plot(x0, y0, '-')
 marks1, = ax1.plot(x0, y0, 'x')
 plt.xlabel('Position (mm)')
@@ -35,14 +34,13 @@ ax1.set_xlim([xmin,xmax])
 ax1.set_ylim([ymin,ymax])
 
 # add a freq plot
-ax2 = fig.add_subplot(222)
+ax2 = fig.add_subplot(122)
 line2, = ax2.plot(fq0, '-')
 marks2, = ax2.plot(target, '-')
 plt.xlabel('Overtone')
 plt.ylabel('Frequency (Hz)')
 ax2.set_ylim([min(target),max(target)])
 
-ax3 = fig.subplot(2,2,[3,4])
 
 
 # remove duplicates
@@ -54,7 +52,6 @@ for i, pts in enumerate(allpts):
         keys.append(pts[0][0])
         cleanfqs.append(fqs[i])
 
-frame = 0
 raw_input()
 
 for i, pts in enumerate(cleanpts):    
@@ -64,12 +61,7 @@ for i, pts in enumerate(cleanpts):
     line1.set_xdata(c[0])
     line1.set_ydata(c[1])   
     line2.set_ydata(cleanfqs[i])
-     
     plt.draw()
-    
-    if frame % 10 == 0:
-        raw_input()
-    frame += 1
 
     sleep(0.2)
     
