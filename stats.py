@@ -2,6 +2,7 @@ from time import sleep
 import pickle
 import matplotlib.pyplot as plt
 from xy_interpolation import make_shape
+from sounds import *
 
 retdict = pickle.load(open('vals.p','rb'))
 allvecs = retdict['allvecs']
@@ -54,7 +55,13 @@ for i, pts in enumerate(allpts):
 
 raw_input()
 
-for i, pts in enumerate(cleanpts):    
+p = pyaudio.PyAudio()
+stream = p.open(format=pyaudio.paFloat32, channels=1, rate=44100, output=1)
+
+for i, pts in enumerate(cleanpts):   
+
+
+     
     marks1.set_xdata(pts[0])
     marks1.set_ydata(pts[1])
     c = make_shape(pts)
@@ -62,9 +69,11 @@ for i, pts in enumerate(cleanpts):
     line1.set_ydata(c[1])   
     line2.set_ydata(cleanfqs[i])
     plt.draw()
-
-    sleep(0.2)
+    play_tone(stream,frequencies=fqs[i],length=0.1)
     
+    # sleep(0.2)
+stream.close()
+p.terminate()
 raw_input()
 plt.figure()
 plt.title('Fitness Convergence')
