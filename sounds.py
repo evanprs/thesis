@@ -11,9 +11,9 @@ def sine(frequency, length, rate):
     return np.sin(np.arange(length) * factor)
 
 
-def play_tone(stream, frequencies=[440,880], length=1, rate=44100):
+def play_tone(stream, frequencies, length=1, rate=44100):
     chunks = []
-    data = sum([sine(f, length, rate) for f in frequencies])
+    data = sum([sine(f, length, rate) * (float(frequencies[0]**2)/f**2) for f in frequencies])
     chunks.append(data)
     chunk = np.concatenate(chunks) * 0.25
 

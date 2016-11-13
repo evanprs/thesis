@@ -6,9 +6,11 @@ import pickle
 
 
 THICKNESS = 6.35  # 1/4 inch in mm
-TARGET = np.array([.5,1,1.2,1.5,2,2.5])*440
+TARGET = np.array([.5,1,1.25,1.5,2,2.5])*440
 METHOD = 'simplex' # options: simplex, basinhopping
-GRADE = 'course' # options: course, fine
+GRADE = 'fine' # options: coarse, fine
+
+unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
 def evalFitness(flatpts, target, crosspenalty=100.0*1000):
     """
@@ -23,12 +25,11 @@ def evalFitness(flatpts, target, crosspenalty=100.0*1000):
         fitness (float): RSS of frequencies if valid, crosspenalty if not
     """
     assert len(flatpts) % 2 == 0
-    x = flatpts[:len(flatpts) // 2]
-    y = flatpts[len(flatpts) // 2:]
-    pts = (x, y)
+    x,y = unflatten(flatpts)
+    pts = (x, y) # TODO - I can compress these two lines, right?
     n_freq = len(target)
     try:
-        if GRADE == 'course':
+        if GRADE == 'coarse':
             s = make_shape(pts, max_output_len=50)
         else:
             s = make_shape(pts, max_output_len=100)
@@ -56,12 +57,12 @@ def findOptimumCurve(target, c0=None):
         optpts (tuple): points (x,y) defining optimized curve
     """
     if c0 == None:
-        _, c0 = make_random_shape(7, scale=150, circ=True)
+        _, c0 = make_random_shape(6, scale=150, circ=True)
     x, y = c0
     flatpts = np.append(x, y)
     
     if METHOD == 'simplex':
-        if GRADE == 'course':
+        if GRADE == 'coarse':
             retvals = fmin(lambda pts: evalFitness(pts, target), flatpts, 
                 disp=True, xtol = 1.0, ftol=1.0, retall=True, maxiter=300)
         else:
@@ -101,16 +102,19 @@ def findOptimumCurve(target, c0=None):
 
 
 if __name__ == '__main__':
-    
     attempts = []
-    targets = [TARGET * 2**(n/12.0) for n in range(13)]
-    for trg in targets:
+    previous = pickle.load(open('chrom_todo.p'))
+    targets = [a['target'] for a in previous]
+    c0s = [a['optpts'] for a in previous]
+    # targets = [TARGET * 2**(n/12.0) for n in range(13)]
+    # targets = [ np.array([.5,1,2,3,4])*440 ]
+    for trg, c0 in zip(targets, c0s):
         i = 0
-        while i < 5:  # try 10 times
+        while i < 5:  # try a few times
             fits, fqs = [], [] # TODO - crude, fix this 
-            optpts, retdict = findOptimumCurve(trg)
+            optpts, retdict = findOptimumCurve(trg,c0)
             attempts.append(retdict)
             pickle.dump(attempts, open('attempts.p','wb'))
             i += 1
-    
-    
+            if retdict['fits'][-1] < 0.1 : # good enough
+                break
