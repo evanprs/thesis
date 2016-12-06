@@ -19,7 +19,9 @@ class Bell():
         self.method = method
         self.grade = grade
         self.ctrlpoints = ctrlpoints
-        self.c0 = None
+        self.c0 = c0
+        if self.c0 == None:
+            _, self.c0 = make_random_shape(6, scale=150, circ=True)
         
         self.optpts = []
         self.allvecs = []
@@ -67,8 +69,7 @@ class Bell():
         Returns:
             optpts (tuple): points (x,y) defining optimized curve
         """
-        if self.c0 == None:
-            _, self.c0 = make_random_shape(6, scale=150, circ=True)
+
         x, y = self.c0
         flatpts = np.append(x, y)
     
