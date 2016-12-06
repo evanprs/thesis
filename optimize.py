@@ -95,14 +95,14 @@ class Bell():
         #  TODO - live update instead of waiting til end to write - better crash recovery
         labels = ['xopt','allvecs']
         retdict = dict(zip(labels,retvals))  # automatically ignores allvecs if absent
-        retdict['fits'] = fits
-        retdict['fqs'] = fqs
+        retdict['fits'] = self.fits
+        retdict['fqs'] = self.fqs
     
         outpts = retvals[0]
         x = outpts[:len(outpts) // 2]
         y = outpts[len(outpts) // 2:]
         self.optpts = (x, y)
-        print(optpts)
+        print(self.optpts)
     
         retdict['optpts'] = self.optpts # for redundancy 
         retdict['target'] = self.target
