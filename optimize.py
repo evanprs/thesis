@@ -4,11 +4,14 @@ from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
 
+VERSION = '1.1'
 
-THICKNESS = 6.35  # 1/4 inch in mm
-TARGET = np.array([.5,1,1.25,1.5,2,2.5])*440
-METHOD = 'simplex' # options: simplex, basinhopping
-GRADE = 'fine' # options: coarse, fine
+# Old Globals
+# 
+# THICKNESS = 6.35  # 1/4 inch in mm
+# TARGET = np.array([.5,1,1.25,1.5,2,2.5])*440
+# METHOD = 'simplex' # options: simplex, basinhopping
+# GRADE = 'fine' # options: coarse, fine
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
@@ -22,13 +25,19 @@ class Bell():
         self.c0 = c0
         if self.c0 == None:
             _, self.c0 = make_random_shape(6, scale=150, circ=True)
+        self.version = VERSION
         
         self.optpts = []
         self.allvecs = []
         self.fits = []
         self.fqs = []
         self.xopt = []
-    
+        self.best_index = None
+        self.best_fit = None
+        self.best_fq = None
+
+        
+        
     def evalFitness(self, flatpts, crosspenalty=100.0*1000):
         """
         Fitness of points defining curve. Needs flattened points for use with fmin
@@ -111,6 +120,11 @@ class Bell():
         self.xopt = retdict['xopt']
         # TODO - this is ridiculous
     
+        # isolate best case
+        self.best_index = map(list, self.allvecs).index(list(self.xopt))
+        self.best_fit = min(self.fits)
+        self.best_fq = self.fqs[self.fits.index(self.best_fit)]
+        
         pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
         pickle.dump(self, open('bell.b','wb'))
         return retdict
