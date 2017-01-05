@@ -16,16 +16,20 @@ VERSION = '1.1'
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
 class Bell():
-    def __init__(self, thickness, target, method='simplex', grade='fine', ctrlpoints=5, c0=None):
+    def __init__(self, thickness, target, scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
+        self.version = VERSION
         self.thickness = thickness
         self.target = target
         self.method = method
         self.grade = grade
-        self.ctrlpoints = ctrlpoints
         self.c0 = c0
+        self.scale = scale
+        
         if self.c0 == None:
-            _, self.c0 = make_random_shape(6, scale=150, circ=True)
-        self.version = VERSION
+            self.ctrlpoints = ctrlpoints
+            _, self.c0 = make_random_shape(self.ctrlpoints, scale=self.scale, circ=True)
+        else:
+            self.ctrlpoints = len(self.c0[0])
         
         self.optpts = []
         self.allvecs = []
@@ -35,6 +39,11 @@ class Bell():
         self.best_index = None
         self.best_fit = None
         self.best_fq = None
+        
+        # TODO - clean up folder handling (subdirectories during crash, etc.)
+        #      - then, have a function .getmodes(modes = [1]) that saves pix of modes
+        
+        # TODO - come up with a good system for batches
 
         
         
@@ -51,7 +60,7 @@ class Bell():
         """
         assert len(flatpts) % 2 == 0
         x,y = unflatten(flatpts)
-        pts = (x, y) # TODO - I can compress these two lines, right?
+        pts = (x, y)
         n_freq = len(self.target)
         try:
             if self.grade == 'coarse':
@@ -64,10 +73,9 @@ class Bell():
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
-        except ValueError:
+        except ValueError as err:
             # if you give a constant value, the algorithm thinks it's finished
-            # TODO - find something better
-            print('Curve broke the solver')
+            print(err)
             return crosspenalty * (random()+1)
 
 
@@ -81,23 +89,28 @@ class Bell():
 
         x, y = self.c0
         flatpts = np.append(x, y)
-    
+        if self.grade == 'coarse':
+            ftol = 1.0
+            xtol = 1.0
+        else:
+            ftol = .1
+            xtol = .1
+        
         if self.method == 'simplex':
-            if self.grade == 'coarse':
-                retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                    disp=True, xtol = 1.0, ftol=1.0, retall=True, maxiter=300)
-            else:
-                retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                    disp=True, xtol = .1, ftol=.1, retall=True, maxiter=300)
+            retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
+                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=300)
+       
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):
                 c = (x_new[:len(x_new) // 2], x_new[len(x_new) // 2:])
                 return not curve_intersects(interp(c)) # check for intersection
                 # TODO - redundant - happens inside basinhopping anyways
-            
+            minimizer_kwargs = {'tol':ftol*100}
             res =  basinhopping(lambda pts: self.evalFitness(pts), flatpts, T=1,
-                         accept_test= test, stepsize=200, disp=True, callback = print)
-            retvals = [res.x]
+                         accept_test=test, stepsize=20, disp=True, callback = print,
+                         minimizer_kwargs=minimizer_kwargs)
+            retvals = [res.x, list(res.x)]  # this is so indexing to look for xopt doesn't break
+        
         else: raise ValueError("Invalid method selected")
     
         #  save the data for lata
