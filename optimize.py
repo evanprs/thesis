@@ -6,13 +6,6 @@ import pickle
 
 VERSION = '1.1'
 
-# Old Globals
-# 
-# THICKNESS = 6.35  # 1/4 inch in mm
-# TARGET = np.array([.5,1,1.25,1.5,2,2.5])*440
-# METHOD = 'simplex' # options: simplex, basinhopping
-# GRADE = 'fine' # options: coarse, fine
-
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
 class Bell():

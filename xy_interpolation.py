@@ -397,10 +397,10 @@ def fitness(fq_ideal, fq_actual):
     try:
         assert len(fq_ideal) == len(fq_actual)  # just in case
     except TypeError:
-        print fq_actual
-        print fq_ideal
-        print type(fq_actual)
-        print type(fq_ideal)
+        print(fq_actual)
+        print(fq_ideal)
+        print(type(fq_actual))
+        print(type(fq_ideal))
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
