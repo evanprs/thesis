@@ -9,14 +9,30 @@ VERSION = '1.1'
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
 class Bell():
+    """
+    Creates a bell curve waiting to be optimized.
+    
+    Attributes:
+        version (str): version of code under which the bell was initialized
+        thickness (float): thickness, in mm, of bell to be simulated
+        target (np.array): desired eigenfrequencies of bell
+        scale (int, optional): the length scale of the initial random bell curve
+        method (str, optional): method for optimizing curve, currently only simplex works
+        grade (str, optional): either 'coarse' or 'fine', determines FEA mesh size
+        ctrlpoints (int, optional): number of control points in curve, determines complexity
+        c0 (list list, optional): initial curve to be optimized
+
+
+    
+    """
     def __init__(self, thickness, target, scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
         self.version = VERSION
         self.thickness = thickness
         self.target = target
+        self.scale = scale
         self.method = method
         self.grade = grade
         self.c0 = c0
-        self.scale = scale
         
         if self.c0 == None:
             self.ctrlpoints = ctrlpoints
