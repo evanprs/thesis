@@ -138,19 +138,23 @@ class Bell():
 
 
 if __name__ == '__main__':
-    attempts = []
-    previous = pickle.load(open('chrom_todo.p'))
-    targets = [a['target'] for a in previous]
-    c0s = [a['optpts'] for a in previous]
-    # targets = [TARGET * 2**(n/12.0) for n in range(13)]
-    # targets = [ np.array([.5,1,2,3,4])*440 ]
-    for trg, c0 in zip(targets, c0s):
+    # This is an example use case
+    thick = 6.35
+    attempts, bells = [], []  # these lists store the same information in two different ways
+    target_0 = np.array([.5,1,2,3,4])*440 
+    targets = [target_0 * 2**(n/12.0) for n in range(13)]
+    for trg in targets:
         i = 0
         while i < 5:  # try a few times
             fits, fqs = [], [] # TODO - crude, fix this
-            retdict = findOptimumCurve(trg,c0)
+            bell = Bell(thick, trg, ctrlpoints=6, grade='coarse')
+            
+            retdict = bell.findOptimumCurve()
+            
             attempts.append(retdict)
+            bells.append(bell)
             pickle.dump(attempts, open('attempts.p','wb'))
+            pickle.dump(bells, open('bells.p','wb'))
             i += 1
             if retdict['fits'][-1] < 0.1 : # good enough
                 break
