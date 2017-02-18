@@ -23,6 +23,10 @@ def smart_mkdir(path):
         os.makedirs(path)
     return path
 
+def smart_syscall(call_text):
+    exit_status = os.system(call_text)
+    if exit_status != 0:
+        raise IOError("System call '" + call_text + "' failed. Is CalculiX installed?")
 
 def rand_points(n, scale=1):
     xp = np.random.random(n) * scale
@@ -364,11 +368,11 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curve))
         curve_to_fbd(curve, thickness, name + '.fbd')
-        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+        smart_syscall('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
-            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
+            smart_syscall('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
         else:
-            os.system('ccx ' + name + ' >> test.log')
+            smart_syscall('ccx ' + name + ' >> test.log')
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -376,12 +380,12 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
         except StopIteration:
             os.chdir('..')
             if not savedata:
-                os.system('rm -r '+folder_path) #BE VERY CAREFUL
+                smart_syscall('rm -r '+folder_path) #BE VERY CAREFUL
             raise ValueError('Curve did not create a valid object')
         os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         os.chdir('..')
         if not savedata:
-            os.system('rm -r '+folder_path) 
+            smart_syscall('rm -r '+folder_path) 
 
 
     fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
