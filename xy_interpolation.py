@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -13,6 +14,9 @@ def smart_mkdir(path):
     Returns:
         the path of the actual folder created
     """
+    timestamp = '__{:%Y-%m-%d__%H:%M:%S}'.format(datetime.datetime.now())
+    path = path + timestamp
+    
     if not os.path.exists(path):
         os.makedirs(path)
     else:
@@ -26,7 +30,8 @@ def smart_mkdir(path):
 def smart_syscall(call_text):
     exit_status = os.system(call_text)
     if exit_status != 0:
-        raise IOError("System call '" + call_text + "' failed. Is CalculiX installed?")
+        raise IOError("System call '" + call_text + "' failed with exit status " 
+                        + str(exit_status) +". Is CalculiX installed?")
 
 def rand_points(n, scale=1):
     xp = np.random.random(n) * scale
@@ -361,7 +366,9 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
         mm (list): effective modal mass (x,y,z,x_rot,y_rot,z_rot)
     '''
     totalSuccess = False
+    home = os.getcwd()
     while not totalSuccess:
+        os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
         make_inp()
@@ -383,11 +390,11 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
                 smart_syscall('rm -r '+folder_path) #BE VERY CAREFUL
             raise ValueError('Curve did not create a valid object')
         os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
-        os.chdir('..')
         if not savedata:
+            os.chdir('/tmp')
             smart_syscall('rm -r '+folder_path) 
-
-
+        
+    os.chdir(home) 
     fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
     return fq, pf, mm
 

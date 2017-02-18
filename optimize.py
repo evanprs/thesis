@@ -22,7 +22,6 @@ class Bell():
         ctrlpoints (int, optional): number of control points in curve, determines complexity
         c0 (list list, optional): initial curve to be optimized
 
-
     
     """
     def __init__(self, thickness, target, scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
@@ -45,7 +44,6 @@ class Bell():
         self.fits = []
         self.fqs = []
         self.xopt = []
-        self.best_index = None
         self.best_fit = None
         self.best_fq = None
         
@@ -143,7 +141,6 @@ class Bell():
         # TODO - this is ridiculous
     
         # isolate best case
-        self.best_index = map(list, self.allvecs).index(list(self.xopt))
         self.best_fit = min(self.fits)
         self.best_fq = self.fqs[self.fits.index(self.best_fit)]
         
@@ -155,22 +152,25 @@ class Bell():
 
 if __name__ == '__main__':
     # This is an example use case
-    thick = 6.35
+    thick = 6.35  # choose a thickness of 1/4" (=6.35 mm)
+    target_0 = np.array([.5,1,2,3,4])*440  # choose a fundamental (440 Hz) and a set of overtones
+    ctrl_pts = 6 # interpolate the bell curve from 6 points
+    minimum_fitness = 0.1  # this is greater than audible precision
+    targets = [target_0 * 2**(n/12.0) for n in range(13)] # find look bells of that target in a chromatic scale
+    
     attempts, bells = [], []  # these lists store the same information in two different ways
-    target_0 = np.array([.5,1,2,3,4])*440 
-    targets = [target_0 * 2**(n/12.0) for n in range(13)]
     for trg in targets:
         i = 0
         while i < 5:  # try a few times
             fits, fqs = [], [] # TODO - crude, fix this
-            bell = Bell(thick, trg, ctrlpoints=6, grade='coarse')
+            bell = Bell(thick, trg, ctrlpoints=ctrl_pts, grade='coarse') # initialize a bell
             
-            retdict = bell.findOptimumCurve()
+            retdict = bell.findOptimumCurve()  # optimize its shape
             
-            attempts.append(retdict)
-            bells.append(bell)
-            pickle.dump(attempts, open('attempts.p','wb'))
+            attempts.append(retdict)  # add the result to `attempts`
+            bells.append(bell)  # add the bell object to `bells`
+            pickle.dump(attempts, open('attempts.p','wb'))  # save both to review later
             pickle.dump(bells, open('bells.p','wb'))
             i += 1
-            if retdict['fits'][-1] < 0.1 : # good enough
+            if retdict['fits'][-1] < minimum_fitness : # good enough for now. If 
                 break
