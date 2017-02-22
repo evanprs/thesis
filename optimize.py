@@ -148,9 +148,18 @@ class Bell():
         pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
         pickle.dump(self, open('bell.b','wb'))
         return retdict
-
-
-
+       
+        
+    def show(self):
+        """ If the optimization has been run, shows the result in CalculiX."""
+        if self.optpts:
+            if self.grade == 'coarse':
+                s = xy.make_shape(self.optpts, max_output_len=50)
+            else:
+                s = xy.make_shape(self.optpts, max_output_len=100)
+            fq, _, _ = xy.find_eigenmodes(s, self.thickness, self.elastic, self.density, showshape=True)
+    
+    
 if __name__ == '__main__':
     # This is an example use case
     thick = 6.35  # choose a thickness of 1/4" (=6.35 mm)

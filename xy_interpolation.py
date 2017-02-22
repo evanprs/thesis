@@ -441,7 +441,6 @@ def fitness(fq_ideal, fq_actual):
 
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)
-    # s = make_shape(     , max_output_len=50)
     fq, pf, mm = find_eigenmodes(s, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True)
     plt.figure()
     plt.plot(fq)
