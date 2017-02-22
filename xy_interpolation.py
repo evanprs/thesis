@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from itertools import combinations
 import os
+import subprocess
 from dxfwrite import DXFEngine as dxf
 
 
@@ -28,13 +29,13 @@ def smart_mkdir(path):
     return path
 
 def smart_syscall(call_text):
-    exit_status = os.system(call_text)
+    exit_status = subprocess.call(call_text, shell=True, stdout=subprocess.PIPE)
     if exit_status != 0:
         raise IOError("System call '" + call_text + "' failed with exit status " 
                         + str(exit_status) +". Is CalculiX installed?")
 
 # we want to test if ccx/cgx will work before beginning, so call them now to test
-smart_syscall('ccx')
+smart_syscall('cgx')
 
 def rand_points(n, scale=1):
     xp = np.random.random(n) * scale
@@ -441,7 +442,7 @@ PLOT_SHAPE = False
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)
     # s = make_shape(     , max_output_len=50)
-    fq, pf, mm = find_eigenmodes(s, 6.35, showshape=True)
+    fq, pf, mm = find_eigenmodes(s, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
