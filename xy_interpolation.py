@@ -33,6 +33,9 @@ def smart_syscall(call_text):
         raise IOError("System call '" + call_text + "' failed with exit status " 
                         + str(exit_status) +". Is CalculiX installed?")
 
+# we want to test if ccx/cgx will work before beginning, so call them now to test
+smart_syscall('ccx')
+
 def rand_points(n, scale=1):
     xp = np.random.random(n) * scale
     yp = np.random.random(n) * scale
@@ -282,27 +285,38 @@ def pts_to_dxf(pts, name='test.dxf'):
         i += 1
     drawing.save()
 
-inptext = '''
-*include, input=all.msh
-*MATERIAL,NAME=Al
-*ELASTIC
-69000e6,0.33
-*DENSITY
-0.002712
-*SOLID SECTION,ELSET=Eall,MATERIAL=Al
-*STEP, PERTURBATION 
-*FREQUENCY
-14
-*NODE PRINT,FREQUENCY=0
-*EL PRINT,FREQUENCY=0
-*NODE FILE
-U
-*EL FILE
-S
-*END STEP'''
 
 
-def make_inp(name='test'):
+def make_inp(elastic='69000e6,0.33', density=0.002712, freqs=14, name='test'):
+    """ Creates a .inp file for cgx which sets material parameters.
+    Defaults chosen for 6061 Al.
+    
+    Arguments:
+        elastic (str): young's modulus in Pa and poisson's ratio, comma separated
+        freqs (int): number of eigenfrequencies to calculate
+        density (float): density of material in kg/cm^3
+        name (str): .inp filename
+    """
+    
+    inptext = '''
+    *include, input=all.msh
+    *MATERIAL,NAME=Al
+    *ELASTIC
+    {}
+    *DENSITY
+    {}
+    *SOLID SECTION,ELSET=Eall,MATERIAL=Al
+    *STEP, PERTURBATION 
+    *FREQUENCY
+    {}
+    *NODE PRINT,FREQUENCY=0
+    *EL PRINT,FREQUENCY=0
+    *NODE FILE
+    U
+    *EL FILE
+    S
+    *END STEP'''.format(elastic, density, freqs)
+    
     with open('./' + name + '.inp', 'w') as inpfile:
         inpfile.write(inptext)
 
@@ -350,7 +364,8 @@ def parse_dat(path):
 
     return (fq, pf, mm)
 
-def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=False):
+
+def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='test', savedata=False):
     '''
     Use the cgx/ccx FEM solver to find the eigenmodes of a plate
     Units of curve and thickness are in mm
@@ -371,15 +386,15 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        make_inp()
+        make_inp(elastic, density)
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curve))
         curve_to_fbd(curve, thickness, name + '.fbd')
-        smart_syscall('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
-            smart_syscall('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
+            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
         else:
-            smart_syscall('ccx ' + name + ' >> test.log')
+            os.system('ccx ' + name + ' >> test.log')
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -387,12 +402,12 @@ def find_eigenmodes(curve, thickness, showshape=False, name='test', savedata=Fal
         except StopIteration:
             os.chdir('..')
             if not savedata:
-                smart_syscall('rm -r '+folder_path) #BE VERY CAREFUL
+                os.system('rm -r '+folder_path) #BE VERY CAREFUL
             raise ValueError('Curve did not create a valid object')
         os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         if not savedata:
             os.chdir('/tmp')
-            smart_syscall('rm -r '+folder_path) 
+            os.system('rm -r '+folder_path) 
         
     os.chdir(home) 
     fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
@@ -415,6 +430,7 @@ def fitness(fq_ideal, fq_actual):
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
+
 
 
 SHOW_STEPS = False

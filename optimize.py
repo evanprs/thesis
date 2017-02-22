@@ -16,6 +16,8 @@ class Bell():
         version (str): version of code under which the bell was initialized
         thickness (float): thickness, in mm, of bell to be simulated
         target (np.array): desired eigenfrequencies of bell
+        elastic (str): young's modulus in Pa and poisson's ratio, comma separated
+        density (float): density of material in kg/cm^3
         scale (int, optional): the length scale of the initial random bell curve
         method (str, optional): method for optimizing curve, currently only simplex works
         grade (str, optional): either 'coarse' or 'fine', determines FEA mesh size
@@ -24,9 +26,12 @@ class Bell():
 
     
     """
-    def __init__(self, thickness, target, scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
+    def __init__(self, thickness, target, elastic='69000e6,0.33', density=0.002712,
+                 scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
         self.version = VERSION
         self.thickness = thickness
+        self.elastic = elastic
+        self.density = density
         self.target = target
         self.scale = scale
         self.method = method
@@ -46,11 +51,6 @@ class Bell():
         self.xopt = []
         self.best_fit = None
         self.best_fq = None
-        
-        # TODO - clean up folder handling (subdirectories during crash, etc.)
-        #      - then, have a function .getmodes(modes = [1]) that saves pix of modes
-        
-        # TODO - come up with a good system for batches
 
         
         
@@ -74,7 +74,7 @@ class Bell():
                 s = make_shape(pts, max_output_len=50)
             else:
                 s = make_shape(pts, max_output_len=100)
-            fq, _, _ = find_eigenmodes(s, self.thickness)
+            fq, _, _ = find_eigenmodes(s, self.thickness, self.elastic, self.density)
             fit = fitness(fq[:n_freq], self.target)
             print(fit)
             self.fits.append(fit)
