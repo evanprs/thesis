@@ -7,6 +7,12 @@ import os
 import subprocess
 from dxfwrite import DXFEngine as dxf
 
+# Globals to activate debug code
+SHOW_STEPS = False
+SHOW_WINS = False
+SHOW_FAILS = False
+PLOT_SHAPE = False
+
 
 def smart_mkdir(path):
     """
@@ -432,12 +438,6 @@ def fitness(fq_ideal, fq_actual):
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
 
-
-
-SHOW_STEPS = False
-SHOW_WINS = False
-SHOW_FAILS = False
-PLOT_SHAPE = False
 
 if __name__ == "__main__":
     s, r = make_random_shape(8, max_output_len=50, scale=100)

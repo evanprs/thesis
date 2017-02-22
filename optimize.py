@@ -1,5 +1,6 @@
 from __future__ import print_function
-from xy_interpolation import *
+import xy_interpolation as xy
+import numpy as np
 from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
@@ -40,7 +41,7 @@ class Bell():
         
         if self.c0 == None:
             self.ctrlpoints = ctrlpoints
-            _, self.c0 = make_random_shape(self.ctrlpoints, scale=self.scale, circ=True)
+            _, self.c0 = xy.make_random_shape(self.ctrlpoints, scale=self.scale, circ=True)
         else:
             self.ctrlpoints = len(self.c0[0])
         
@@ -71,11 +72,11 @@ class Bell():
         n_freq = len(self.target)
         try:
             if self.grade == 'coarse':
-                s = make_shape(pts, max_output_len=50)
+                s = xy.make_shape(pts, max_output_len=50)
             else:
-                s = make_shape(pts, max_output_len=100)
-            fq, _, _ = find_eigenmodes(s, self.thickness, self.elastic, self.density)
-            fit = fitness(fq[:n_freq], self.target)
+                s = xy.make_shape(pts, max_output_len=100)
+            fq, _, _ = xy.find_eigenmodes(s, self.thickness, self.elastic, self.density)
+            fit = xy.fitness(fq[:n_freq], self.target)
             print(fit)
             self.fits.append(fit)
             self.fqs.append(fq)
@@ -110,7 +111,7 @@ class Bell():
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):
                 c = (x_new[:len(x_new) // 2], x_new[len(x_new) // 2:])
-                return not curve_intersects(interp(c)) # check for intersection
+                return not xy.curve_intersects(xy.interp(c)) # check for intersection
                 # TODO - redundant - happens inside basinhopping anyways
             minimizer_kwargs = {'tol':ftol*100}
             res =  basinhopping(lambda pts: self.evalFitness(pts), flatpts, T=1,
