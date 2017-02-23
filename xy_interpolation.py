@@ -40,8 +40,6 @@ def smart_syscall(call_text):
         raise IOError("System call '" + call_text + "' failed with exit status " 
                         + str(exit_status) +". Is CalculiX installed?")
 
-# we want to test if ccx/cgx will work before beginning, so call them now to test
-smart_syscall('cgx')
 
 def rand_points(n, scale=1):
     xp = np.random.random(n) * scale
@@ -387,6 +385,9 @@ def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='t
         pf (list): participation factors (x,y,z,x_rot,y_rot,z_rot)
         mm (list): effective modal mass (x,y,z,x_rot,y_rot,z_rot)
     '''
+    # we want to test if ccx/cgx will work before beginning, so call them now to test
+    smart_syscall('cgx')
+    
     totalSuccess = False
     home = os.getcwd()
     while not totalSuccess:

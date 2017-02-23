@@ -27,13 +27,13 @@ class Bell():
 
     
     """
-    def __init__(self, thickness, target, elastic='69000e6,0.33', density=0.002712,
+    def __init__(self, target, thickness=6.35, elastic='69000e6,0.33', density=0.002712,
                  scale=150, method='simplex', grade='fine', ctrlpoints=5, c0=None):
         self.version = VERSION
+        self.target = target
         self.thickness = thickness
         self.elastic = elastic
         self.density = density
-        self.target = target
         self.scale = scale
         self.method = method
         self.grade = grade
@@ -49,7 +49,6 @@ class Bell():
         self.allvecs = []
         self.fits = []
         self.fqs = []
-        self.xopt = []
         self.best_fit = None
         self.best_fq = None
 
@@ -138,7 +137,6 @@ class Bell():
         retdict['target'] = self.target
         retdict['c0'] = self.c0
         self.allvecs = retdict['allvecs']
-        self.xopt = retdict['xopt']
         # TODO - this is ridiculous
     
         # isolate best case
@@ -148,7 +146,16 @@ class Bell():
         pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
         pickle.dump(self, open('bell.b','wb'))
         return retdict
-       
+    
+    def refine(self):
+        if self.grade == 'coarse':
+            self.grade = 'fine'
+            c0_initial= self.c0  # save for reference
+            self.c0 = self.optpts  # start from the best
+            retdict = self.findOptimumCurve()
+            self.c0 = c0_initial
+            return retdict
+               
         
     def show(self):
         """ If the optimization has been run, shows the result in CalculiX."""
@@ -162,25 +169,26 @@ class Bell():
     
 if __name__ == '__main__':
     # This is an example use case
-    thick = 6.35  # choose a thickness of 1/4" (=6.35 mm)
-    target_0 = np.array([.5,1,2,3,4])*440  # choose a fundamental (440 Hz) and a set of overtones
-    ctrl_pts = 6 # interpolate the bell curve from 6 points
-    minimum_fitness = 0.1  # this is greater than audible precision
-    targets = [target_0 * 2**(n/12.0) for n in range(13)] # find look bells of that target in a chromatic scale
+    bell_params = {
+    'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
+    'ctrlpoints': 6,  # interpolate the bell curve from 6 points
+    'grade': 'coarse', # for quick evaluation
+    'scale': 300,  # initial bell size
+    }
     
-    attempts, bells = [], []  # these lists store the same information in two different ways
+    
+    minimum_fitness = 0.1  # this is below audible precision
+    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*440  # choose a fundamental (440 Hz) and a set of overtones
+    targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
+    
+    bells = []
     for trg in targets:
         i = 0
         while i < 5:  # try a few times
-            fits, fqs = [], [] # TODO - crude, fix this
-            bell = Bell(thick, trg, ctrlpoints=ctrl_pts, grade='coarse') # initialize a bell
-            
-            retdict = bell.findOptimumCurve()  # optimize its shape
-            
-            attempts.append(retdict)  # add the result to `attempts`
-            bells.append(bell)  # add the bell object to `bells`
-            pickle.dump(attempts, open('attempts.p','wb'))  # save both to review later
+            bell = Bell(trg, **bell_params) # initialize a bell
+            bell.findOptimumCurve()  # optimize its shape
+            bells.append(bell) 
             pickle.dump(bells, open('bells.p','wb'))
-            i += 1
-            if retdict['fits'][-1] < minimum_fitness : # good enough for now. If 
+            if bell.best_fit < minimum_fitness: # good enough for now.
                 break
+            i += 1
