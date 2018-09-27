@@ -145,6 +145,54 @@ def interp(points, n=2000):
     ynew = np.delete(ynew, 0)
     return xnew, ynew
 
+def make_circle(r, center=(0,0), n=2000):
+    """ 
+    Args:
+        r (float): radius
+        center (float,float): (x,y) center point
+        n (int): number of points to draw
+
+    Returns:
+        the pair of interpolated points (x,y)
+
+    """   
+    theta = np.linspace(0, 2*np.pi, n, endpoint=False)
+    x = r * np.cos(theta) + center[0]
+    y = r * np.sin(theta) + center[1]
+    return x,y
+    
+def make_moon(r, phase, center=(0,0), n=2000):
+    """ 
+    Returns the outline points of a crescent moon
+    Args:
+        r (float): radius
+        phase (float): fractional moon phase (0,1], 1=full
+        center (float,float): (x,y) center point
+        n (int): number of points to draw
+
+    Returns:
+        the pair of interpolated points (x,y)
+
+    """
+    assert 0 < phase <= 1    
+    
+    theta = np.linspace(np.pi/2, np.pi*3/2, n/2, endpoint=False)
+    xc = r * np.cos(theta) + center[0]
+    yc = r * np.sin(theta) + center[1]
+    
+    
+    theta = np.linspace(np.pi*3/2, np.pi*5/2, n/2, endpoint=False)
+    xe = r * (2 * phase - 1)  * np.cos(theta) + center[0]
+    ye = r * np.sin(theta) + center[1]
+    
+    x = np.concatenate((xc,xe))
+    y = np.concatenate((yc,ye))
+
+    return x,y
+    
+    
+    
+make_moon(2,.2)
 
 def make_shape(pts, max_output_len=100):
     """ 
