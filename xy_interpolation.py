@@ -161,7 +161,7 @@ def make_circle(r, center=(0,0), n=2000):
     y = r * np.sin(theta) + center[1]
     return x,y
     
-def make_moon(r, phase, center=(0,0), n=2000):
+def make_moon(r, phase, center=(0,0), n=50):
     """ 
     Returns the outline points of a crescent moon
     Args:
@@ -171,7 +171,7 @@ def make_moon(r, phase, center=(0,0), n=2000):
         n (int): number of points to draw
 
     Returns:
-        the pair of interpolated points (x,y)
+        curve: the pair of interpolated points (x,y)
 
     """
     assert 0 < phase <= 1    
@@ -188,12 +188,14 @@ def make_moon(r, phase, center=(0,0), n=2000):
     x = np.concatenate((xc,xe))
     y = np.concatenate((yc,ye))
 
-    return x,y
-    
-    
-    
-make_moon(2,.2)
+    # resample to avoid discontinuities
+    curve = (x,y)
+    pts = tuple(map(lambda x: np.append(x, x[0]), curve))
+    curve = interp(pts, n=n)
 
+    return curve
+    
+    
 def make_shape(pts, max_output_len=100):
     """ 
     Args:
@@ -262,7 +264,6 @@ def make_random_shape(n_pts, max_output_len=100, scale=500, circ=False):
 def curve_to_fbd(curve, thick, fbd_filepath):
     """
     Converts a set of (x,y) points to a .fbd file.
-    WARNING - will overwrite old files
     WARNING - will ruin things downstream if you give it a bad curve
     
     Args:
@@ -270,28 +271,22 @@ def curve_to_fbd(curve, thick, fbd_filepath):
         thick: the thickness of the desired solid
         fbd_filepath: path to output file
     """
-    BIAS = 4
+    BIAS = '' # null until I figure out why this is here
     assert len(curve[0]) == len(curve[1])
     n_pts = len(curve[0])
     with open(fbd_filepath, 'w') as fbdfile:
         # build points
-        i = 0
-        while i < n_pts:
+        for i in range(n_pts):
             fbdfile.write('pnt p' + str(i) + ' ' + str(curve[0][i]) + ' ' + str(curve[1][i]) + ' 0\n')
-            i += 1
 
         # build lines
-        i = 0
-        while i < n_pts:
+        for i in range(n_pts):
             fbdfile.write('line l' + str(i) + ' p' + str(i) + ' p' + str((i + 1) % n_pts) + ' ' + str(BIAS) + '\n')
-            i += 1
 
         # combine all but the first 2 of the lines into one
         fbdfile.write('lcmb U0 + l2\n')
-        i = 3
-        while i < n_pts:
+        for i in range(3,n_pts):
             fbdfile.write('lcmb U0 ADD - l' + str(i) + '\n')
-            i += 1
 
         # try and make a surface from it?
         fbdfile.write('gsur s1 + BLEND + U0 + l0 + l1\n')
@@ -459,6 +454,7 @@ def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='t
             os.chdir('..')
             if not savedata:
                 os.system('rm -r '+folder_path) #BE VERY CAREFUL
+            print(folder_path)
             raise ValueError('Curve did not create a valid object')
         os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         if not savedata:
@@ -489,8 +485,10 @@ def fitness(fq_ideal, fq_actual):
 
 
 if __name__ == "__main__":
-    s, r = make_random_shape(8, max_output_len=50, scale=100)
-    fq, pf, mm = find_eigenmodes(s, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True)
+    # s, r = make_random_shape(8, max_output_len=50, scale=100)
+    s = make_moon(100,.1,n=20)
+    fq, pf, mm = find_eigenmodes(s, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
+
