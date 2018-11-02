@@ -145,7 +145,36 @@ def interp(points, n=2000):
     ynew = np.delete(ynew, 0)
     return xnew, ynew
 
-def make_circle(r, center=(0,0), n=2000):
+
+def bevel(curve, radius):
+    """
+    Imposes a minimum radius on a 2D curve.
+
+    Args:
+        curve (tuple): (x,y) points
+        radius (int): the desired minimum radius
+
+    Returns:
+        beveled (tuple): (x,y) points with min radius
+        """
+    import pyclipper
+    scale = 10000
+    radius *= scale
+    transposed = pyclipper.scale_to_clipper(zip(*curve), scale=scale)
+
+    pco = pyclipper.PyclipperOffset()
+    pco.AddPath(transposed, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
+    inset = pco.Execute(-radius)[0]
+
+    pco2 = pyclipper.PyclipperOffset()
+    pco2.AddPath(inset, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
+    solution = pco2.Execute(radius)[0]
+    # solution.pop(0) # TODO: decide if necessary
+
+    beveled = pyclipper.scale_from_clipper(zip(*solution), scale=scale)
+    return beveled
+
+def make_circle(r, center=(0,0), n=50):
     """ 
     Args:
         r (float): radius
@@ -188,8 +217,13 @@ def make_moon(r, phase, center=(0,0), n=50):
     x = np.concatenate((xc,xe))
     y = np.concatenate((yc,ye))
 
-    # resample to avoid discontinuities
     curve = (x,y)
+
+    # soften edges
+    curve = bevel(curve, 1)
+    # TODO - bevel returns [(x,y)..], so no need to retranspose
+
+    # resample
     pts = tuple(map(lambda x: np.append(x, x[0]), curve))
     curve = interp(pts, n=n)
 
@@ -486,8 +520,9 @@ def fitness(fq_ideal, fq_actual):
 
 if __name__ == "__main__":
     # s, r = make_random_shape(8, max_output_len=50, scale=100)
-    s = make_moon(100,.1,n=20)
-    fq, pf, mm = find_eigenmodes(s, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
+
+    moon = make_moon(100,.20,n=50)
+    fq, pf, mm = find_eigenmodes(moon, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
