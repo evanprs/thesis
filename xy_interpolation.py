@@ -160,7 +160,7 @@ def bevel(curve, radius):
     import pyclipper
     scale = 10000
     radius *= scale
-    transposed = pyclipper.scale_to_clipper(zip(*curve), scale=scale)
+    transposed = pyclipper.scale_to_clipper(list(zip(*curve)), scale=scale)
 
     pco = pyclipper.PyclipperOffset()
     pco.AddPath(transposed, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
@@ -171,7 +171,7 @@ def bevel(curve, radius):
     solution = pco2.Execute(radius)[0]
     # solution.pop(0) # TODO: decide if necessary
 
-    beveled = pyclipper.scale_from_clipper(zip(*solution), scale=scale)
+    beveled = pyclipper.scale_from_clipper(list(zip(*solution)), scale=scale)
     return beveled
 
 def make_circle(r, center=(0,0), n=50):
@@ -205,12 +205,12 @@ def make_moon(r, phase, center=(0,0), n=50):
     """
     assert 0 < phase <= 1    
     
-    theta = np.linspace(np.pi/2, np.pi*3/2, n/2, endpoint=False)
+    theta = np.linspace(np.pi/2, np.pi*3/2, n//2, endpoint=False)
     xc = r * np.cos(theta) + center[0]
     yc = r * np.sin(theta) + center[1]
     
     
-    theta = np.linspace(np.pi*3/2, np.pi*5/2, n/2, endpoint=False)
+    theta = np.linspace(np.pi*3/2, np.pi*5/2, n//2, endpoint=False)
     xe = r * (2 * phase - 1)  * np.cos(theta) + center[0]
     ye = r * np.sin(theta) + center[1]
     
@@ -311,16 +311,16 @@ def curve_to_fbd(curve, thick, fbd_filepath):
     with open(fbd_filepath, 'w') as fbdfile:
         # build points
         for i in range(n_pts):
-            fbdfile.write('pnt p' + str(i) + ' ' + str(curve[0][i]) + ' ' + str(curve[1][i]) + ' 0\n')
+            fbdfile.write(f'pnt p{i} {curve[0][i]}  {curve[1][i]} 0\n')
 
         # build lines
         for i in range(n_pts):
-            fbdfile.write('line l' + str(i) + ' p' + str(i) + ' p' + str((i + 1) % n_pts) + ' ' + str(BIAS) + '\n')
+            fbdfile.write(f'line l{i} p{i} p{(i+1)%n_pts} {BIAS}\n')
 
         # combine all but the first 2 of the lines into one
         fbdfile.write('lcmb U0 + l2\n')
         for i in range(3,n_pts):
-            fbdfile.write('lcmb U0 ADD - l' + str(i) + '\n')
+            fbdfile.write(f'lcmb U0 ADD - l{i}\n')
 
         # try and make a surface from it?
         fbdfile.write('gsur s1 + BLEND + U0 + l0 + l1\n')
@@ -329,10 +329,10 @@ def curve_to_fbd(curve, thick, fbd_filepath):
         fbdfile.write('seta botpts se all\n')
 
         # translate everything up by the thickness
-        fbdfile.write('swep all toppts tra 0 0 ' + str(thick) + ' \n')
+        fbdfile.write(f'swep all toppts tra 0 0 {thick}')
 
         # do something the developer suggested
-        fbdfile.write('div all 2' + ' \n')
+        fbdfile.write('div all 2\n')
 
         # mesh using tetrahedrons, write mesh to file, and quit
         fbdfile.write('elty all te10\n')
@@ -420,29 +420,29 @@ def parse_dat(path):
     with open(path, 'r') as datfile:
         # get frequencies
         for i in range(7):
-            datfile.next()
+            datfile.readline()
         for line in datfile:
             if line == '\n': break
             raw_freq.append((line.strip().split('  ')))
 
         # get participation factors
         for i in range(4):
-            datfile.next()
+            datfile.readline()
         for line in datfile:
             if line == '\n': break
             raw_part.append((line.strip().split('  ')))
 
         # get effective modal masses
         for i in range(4):
-            datfile.next()
+            datfile.readline()
         for line in datfile:
             if line == '\n': break
             raw_modm.append((line.strip().split('  ')))
 
     # convert strings to floats
-    fq = map(float, [rf[3] for rf in raw_freq])  # only get Hz
-    pf = [map(float, [num for num in pftxt[1:]]) for pftxt in raw_part]
-    mm = [map(float, [num for num in pftxt[1:]]) for pftxt in raw_part]
+    fq = list(map(float, [rf[3] for rf in raw_freq]))  # only get Hz
+    pf = list(map(float, [num for num in pftxt[1:]]) for pftxt in raw_part)
+    mm = list(map(float, [num for num in pftxt[1:]]) for pftxt in raw_part)
 
     return (fq, pf, mm)
 
