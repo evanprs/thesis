@@ -294,41 +294,52 @@ def make_random_shape(n_pts, max_output_len=100, scale=500, circ=False):
             failcounter += 1
 
 
-def curve_to_fbd(curve, thick, fbd_filepath):
+def curves_to_fbd(curves, fbd_filepath):
     """
     Converts a set of (x,y) points to a .fbd file.
     WARNING - will ruin things downstream if you give it a bad curve
     
     Args:
-        curve: the (x,y) points to be converted. Do not duplicate endpoints
-        thick: the thickness of the desired solid
+        curves [(curve, thick), ...]: list of curves and thicknesses, bottom to top
+            curve: the (x,y) points to be converted. Do not duplicate endpoints
+            thick: the thickness of the desired solid
         fbd_filepath: path to output file
     """
     BIAS = '' # null until I figure out why this is here
-    assert len(curve[0]) == len(curve[1])
-    n_pts = len(curve[0])
     with open(fbd_filepath, 'w') as fbdfile:
-        # build points
-        for i in range(n_pts):
-            fbdfile.write(f'pnt p{i} {curve[0][i]}  {curve[1][i]} 0\n')
+        N = 0 # keep track of points so far for labeling purposes
+        net_thick = 0
+        for curve, thick in curves:
+            assert len(curve[0]) == len(curve[1])
+            n_pts = len(curve[0])
 
-        # build lines
-        for i in range(n_pts):
-            fbdfile.write(f'line l{i} p{i} p{(i+1)%n_pts} {BIAS}\n')
+            # build points
+            for i in range(n_pts):
+                fbdfile.write(f'pnt p{i+N} {curve[0][i]}  {curve[1][i]} {net_thick}\n')
 
-        # combine all but the first 2 of the lines into one
-        fbdfile.write('lcmb U0 + l2\n')
-        for i in range(3,n_pts):
-            fbdfile.write(f'lcmb U0 ADD - l{i}\n')
+            # build lines
+            for i in range(n_pts):
+                fbdfile.write(f'line l{i+N} p{i+N} p{(i+1)%n_pts+N} {BIAS}\n')
 
-        # try and make a surface from it?
-        fbdfile.write('gsur s1 + BLEND + U0 + l0 + l1\n')
+            # combine all but the first 2 of the lines into one
+            fbdfile.write(f'lcmb U{N} + l{N+2}\n')
+            for i in range(3+N, n_pts+N):
+                fbdfile.write(f'lcmb U{N} ADD - l{i}\n')
 
-        # put everything so far into set 'botpts'
-        fbdfile.write('seta botpts se all\n')
+            # try and make a surface from it?
+            fbdfile.write(f'gsur s{N} + BLEND + U{N} + l{N} + l{N+1}\n')
 
-        # translate everything up by the thickness
-        fbdfile.write(f'swep all toppts tra 0 0 {thick}')
+            # put everything so far into set 'botpts'
+            fbdfile.write(f'seta botpts{N} s{N}\n')
+            # fbdfile.write(f'comp botpts{N} d\n')
+
+            # translate everything up by the thickness
+            fbdfile.write(f'swep botpts{N} toppts{N} tra 0 0 {thick}\n')
+
+            N += n_pts + 1
+            net_thick += thick
+
+        fbdfile.write('merge n all\n')
 
         # do something the developer suggested
         fbdfile.write('div all 2\n')
@@ -446,14 +457,15 @@ def parse_dat(path):
     return (fq, pf, mm)
 
 
-def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='test', savedata=False):
+def find_eigenmodes(curves, elastic, density, showshape=False, name='test', savedata=False):
     '''
     Use the cgx/ccx FEM solver to find the eigenmodes of a plate
     Units of curve and thickness are in mm
     
     Args:
-        curve (tuple): the points (x,y) of the curve, don't duplicate endpoint
-        thickness (float): the thickness of the desired plate
+        curves [(curve, thick), ...]: list of curves and thicknesses, bottom to top
+            curve: the (x,y) points to be converted. Do not duplicate endpoints
+            thick: the thickness of the desired solid
         showshape (bool): if True, cgx will show the deformed result
         name (string): name of the folder to be created
     Returns:
@@ -472,8 +484,8 @@ def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='t
         os.chdir(folder_path)
         make_inp(elastic, density)
         with open(name + '.curve','w') as curvefile:
-            curvefile.write(str(curve))
-        curve_to_fbd(curve, thickness, name + '.fbd')
+            curvefile.write(str(curves))
+        curves_to_fbd(curves, name + '.fbd')
         os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
             os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
@@ -489,7 +501,10 @@ def find_eigenmodes(curve, thickness, elastic, density, showshape=False, name='t
                 os.system('rm -r '+folder_path) #BE VERY CAREFUL
             print(folder_path)
             raise ValueError('Curve did not create a valid object')
-        os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
+        try:
+            os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
+        except FileNotFoundError:
+            print(f"didn't find {name}.frd in {folder_path}")
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -518,10 +533,10 @@ def fitness(fq_ideal, fq_actual):
 
 
 if __name__ == "__main__":
-    # s, r = make_random_shape(8, max_output_len=50, scale=100)
-
-    moon = make_moon(100,.20,n=50)
-    fq, pf, mm = find_eigenmodes(moon, 6.35, elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
+    moon = make_moon(100,.9)
+    moon2 = make_moon(100,.15)
+    # fq, pf, mm = find_eigenmodes([(moon, 3)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
+    fq, pf, mm = find_eigenmodes([(moon, 3),(moon2, 2)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
     plt.figure()
     plt.plot(fq)
     plt.show()

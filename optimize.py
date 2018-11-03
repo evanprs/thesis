@@ -74,7 +74,7 @@ class Bell():
                 s = xy.make_shape(pts, max_output_len=50)
             else:
                 s = xy.make_shape(pts, max_output_len=100)
-            fq, _, _ = xy.find_eigenmodes(s, self.thickness, self.elastic, self.density)
+            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
             fit = xy.fitness(fq[:n_freq], self.target)
             print(fit)
             self.fits.append(fit)
@@ -164,7 +164,7 @@ class Bell():
                 s = xy.make_shape(self.optpts, max_output_len=50)
             else:
                 s = xy.make_shape(self.optpts, max_output_len=100)
-            fq, _, _ = xy.find_eigenmodes(s, self.thickness, self.elastic, self.density, showshape=True)
+            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, showshape=True)
     
     
 if __name__ == '__main__':
