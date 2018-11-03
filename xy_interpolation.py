@@ -204,19 +204,18 @@ def make_moon(r, phase, center=(0,0), n=50):
 
     """
     assert 0 < phase <= 1    
-    
-    theta = np.linspace(np.pi/2, np.pi*3/2, n//2, endpoint=False)
+    n0 = 3000 # start with a bunch, resample later
+
+    theta = np.linspace(np.pi/2, np.pi*3/2, n0//2, endpoint=False)
     xc = r * np.cos(theta) + center[0]
     yc = r * np.sin(theta) + center[1]
     
-    
-    theta = np.linspace(np.pi*3/2, np.pi*5/2, n//2, endpoint=False)
+    theta = np.linspace(np.pi*3/2, np.pi*5/2, n0//2, endpoint=False)
     xe = r * (2 * phase - 1)  * np.cos(theta) + center[0]
     ye = r * np.sin(theta) + center[1]
     
     x = np.concatenate((xc,xe))
     y = np.concatenate((yc,ye))
-
     curve = (x,y)
 
     # soften edges
@@ -228,7 +227,7 @@ def make_moon(r, phase, center=(0,0), n=50):
     curve = interp(pts, n=n)
 
     return curve
-    
+
     
 def make_shape(pts, max_output_len=100):
     """ 
