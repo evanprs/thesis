@@ -5,7 +5,7 @@ from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
 
-VERSION = '1.1'
+VERSION = '1.2'
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
@@ -75,7 +75,21 @@ class Bell():
             else:
                 s = xy.make_shape(pts, max_output_len=100)
             fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
-            fit = xy.fitness(fq[:n_freq], self.target)
+
+            # If ng_vol had a memory error, fq will be empty
+            while (len(fq) <= 0):
+                # Attempt to force a self-intersection
+                # NOTE: This might be best in another try/catch block
+                s0 = np.random.shuffle(s[0])
+                s1 = np.random.shuffle(s[1])
+                s_pts = (s0, s1)
+                if self.grade == 'coarse':
+                    s = xy.make_shape(s_pts, max_output_len=50)
+                else:
+                    s = xy.make_shape(s_pts, max_output_len=100)
+                fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
+            fq_nr = xy.find_frequencies(fq, self.target)
+            fit = xy.fitness(fq_nr[:n_freq], self.target)
             print(fit)
             self.fits.append(fit)
             self.fqs.append(fq)
