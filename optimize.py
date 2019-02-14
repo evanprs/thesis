@@ -90,7 +90,7 @@ class Bell():
                 fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
             fq_nr = xy.find_frequencies(fq, self.target)
             fit = xy.fitness(fq_nr[:n_freq], self.target)
-            xy.print_fitness_vals(fq_nr, self.targets, fit)
+            xy.print_fitness_vals(fq_nr, self.target, fit)
             # print(fit)
             self.fits.append(fit)
             self.fqs.append(fq)
