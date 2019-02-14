@@ -2,6 +2,7 @@ from optimize import *
 
 if __name__ == '__main__':
 
+    """
     shape_curve = (
         [
             356.43009552,
@@ -16,6 +17,46 @@ if __name__ == '__main__':
             461.13068339,
             -470.30762604,
             -333.72226511
+        ]
+    )
+    """
+
+    shape_curve = (
+        [
+            0.000,
+            105.709,
+            200.000,
+            73.086,
+            103.923,
+            120.000,
+            103.923,
+            60.000,
+            7.347e-15,
+            -60.000,
+            -103.923,
+            -120.000,
+            -103.923,
+            -73.086,
+            -200.000,
+            -105.709
+        ],
+        [
+            0.000,
+            124.255,
+            281.810,
+            610.093,
+            860.000,
+            920.000,
+            980.000,
+            1023.923,
+            1040.000,
+            1023.923,
+            980.000,
+            920.000,
+            860.000,
+            610.093,
+            281.810,
+            134.255
         ]
     )
 
@@ -42,7 +83,7 @@ if __name__ == '__main__':
             'gauge': 8
         },
         'simulation': {  # NOTE: values to be filled in from above
-            'thickness': 4.27,
+            'thickness': 3.57,
             'target': target,  # NOTE: must be an np.array
             'elastic': '200000e6,0.3',
             'density': '0.007850',
@@ -67,3 +108,20 @@ if __name__ == '__main__':
             else:
                 params['simulation']['c0'] = bell.optpts
             i += 1
+
+    # pnts_to_dxf(bell.optpts)
+    print("\n\n\n")
+    print("="*30)
+    print("Final Results: ")
+    print(f"Fitness: {bell.best_fq}")
+    print("Target FQs: ", end="")
+    print(bell.target)
+    print("Frequencies: ", end="")
+    print(bell.best_fq)
+    print("Points: ", end="")
+    print(bell.optpts)
+
+    print("\n\n\n")
+    print("Geometry to write to DXF: ")
+    print(bell.optpts)
+
