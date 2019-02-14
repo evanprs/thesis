@@ -25,7 +25,7 @@ if __name__ == '__main__':
     base_note = 440
     fit_min = 0.05
     target = np.array([ num_ratio**-1, 1., num_ratio**1 ])*base_note
-    targets = [ target_0*( 2**( n/12.0 ) ) for n in range(num_targets) ]
+    targets = [ target*( 2**( n/12.0 ) ) for n in range(num_targets) ]
 
     # Set up material/simulation properties
     params = {

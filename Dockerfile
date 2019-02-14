@@ -1,16 +1,16 @@
-# ==============================
+#=============================================================================
 # Docker Build File
 # 
-#   This will generate an image that can run the optimization code. It is
-#   built ontop of an Ubuntu 18.04 image. Multiple dependancies are then 
-#   installed, which includes python3, calculix (cgx and ccx), netgen 
-#   (from source via sourceforge).
+#  This will generate an image that can run the optimization code. It is
+#  built ontop of an Ubuntu 18.04 image. Multiple dependancies are then 
+#  installed, which includes python3, calculix (cgx and ccx), netgen 
+#  (from source via sourceforge).
 #
-#   Please note, Vim is included, but is only intended for viewing output
-#   files when debugging in interactive mode. It is not intended to be
-#   used in production. For regular behaviour, it may be left commented.
+#  Please note, Vim is included, but is only intended for viewing output
+#  files when debugging in interactive mode. It is not intended to be
+#  used in production. For regular behaviour, it may be left commented.
 #
-# ==============================
+#=============================================================================
 
 
 # Start from an Ubuntu image
@@ -74,16 +74,17 @@ RUN apt-add-repository universe \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Install Vim (please see note above)
-# RUN apt-add-repository universe \
-# 	&& apt-get update --yes \
-# 	&& apt-get install --yes vim \
-# 	&& rm -rf /var/lib/apt/lists/*
+RUN apt-add-repository universe \
+	&& apt-get update --yes \
+	&& apt-get install --yes vim \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Get the package
-RUN git clone https://github.com/arinconl/thesis.git /app/thesis
+#RUN git clone https://github.com/arinconl/thesis.git /app/thesis
+COPY . ./app
 
 # Install python dependencies (NOTE: should be migrated to pipenv)
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
 # Command to run app
-CMD ["python3", "/app/thesis/optimize.py"]
+CMD ["python3", "/app/runner.py"]

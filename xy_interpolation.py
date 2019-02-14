@@ -573,6 +573,12 @@ def find_frequencies(fq_curr, fq_trgt):
     
     return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
 
+def print_fitness_vals(fq_curr, fq_trgt, fitness):
+    for f in range(len(fq_trgt)):
+        print(f"| {round(fq_trgt[f], 3)} - {round(fq_curr[f], 3)} | = {round(abs(fq_trgt[f] - fq_curr[f]), 3)}")
+    print(f"Fitness: {fitness}\n")
+    return
+
 
 if __name__ == "__main__":
     moon = make_moon(100,.9)
