@@ -80,6 +80,7 @@ class Bell():
             while (len(fq) <= 0):
                 # Attempt to force a self-intersection
                 # NOTE: This might be best in another try/catch block
+                print("Curve did not create a valid mesh")
                 s0 = np.random.shuffle(s[0])
                 s1 = np.random.shuffle(s[1])
                 s_pts = (s0, s1)

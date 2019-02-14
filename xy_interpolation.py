@@ -521,6 +521,13 @@ def fitness(fq_ideal, fq_actual):
     the data differently
     """
     try:
+        if (len(fq_ideal) != len(fq_actual)):
+            print("ideal:")
+            print(fq_ideal)
+            print()
+            print("actual:")
+            print(fq_actual)
+            print()
         assert len(fq_ideal) == len(fq_actual)  # just in case
     except TypeError:
         print(fq_actual)
@@ -553,8 +560,8 @@ def find_frequencies(fq_curr, fq_trgt):
     fq_tol = 10  # Tolerance in Hz
     fq_tot = 0  # Internally track length of our array
 
-    print("Frequencies (raw):")
-    print(fq_curr)
+    # print("Frequencies (raw):")
+    # print(fq_curr)
 
     # Isoldate all potential frequencies in our window
     fq_out = []  # We know the max lenght, so it'd probably be best to fully allocate space to it right now
@@ -571,8 +578,8 @@ def find_frequencies(fq_curr, fq_trgt):
         elif ( fq > (fq_max + fq_tol) ):
             break
     
-    print("Frequencies (pro):")
-    print(fq_out)
+    # print("Frequencies (pro):")
+    # print(fq_out)
 
     # Isolate to "most likely" frequncies
     if (len(fq_out) > fq_num):
@@ -581,7 +588,7 @@ def find_frequencies(fq_curr, fq_trgt):
         fq_out = np.asarray(fq_out)
         return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
     else:
-        print(" -> No need to sample!")
+        # print(" -> No need to sample!")
         return fq_out
 
 def print_fitness_vals(fq_curr, fq_trgt, fitness):
