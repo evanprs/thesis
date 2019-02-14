@@ -60,7 +60,7 @@ if __name__ == '__main__':
         ]
     )
 
-    num_attempts = 2
+    num_attempts = 5
     num_targets = 1
     num_ratio = 1.067
     base_note = 440
