@@ -584,7 +584,7 @@ def find_frequencies(fq_curr, fq_trgt):
     # Isolate to "most likely" frequncies
     if (len(fq_out) > fq_num):
         print(" -> Trying to sample!")
-        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
+        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num))  # Indicies
         fq_out = np.asarray(fq_out)
         return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
     else:
