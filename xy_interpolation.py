@@ -486,14 +486,19 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
-        try:
-            os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
-            if showshape:
-                os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
-            else:
-                os.system('ccx ' + name + ' >> test.log')
-        except FileNotFoundError:
-            print(f"didn't find {name}.frd in {folder_path} during sim")
+
+        ng_tries = 0
+        while ng_tries < 1:
+            try:
+                os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+                if showshape:
+                    os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
+                else:
+                    os.system('ccx ' + name + ' >> test.log')
+                ng_tries += 1
+            except FileNotFoundError:
+                ng_tries = 0
+                print(f"didn't find {name}.frd in {folder_path} during sim")
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -588,6 +593,7 @@ def find_frequencies(fq_curr, fq_trgt):
     if (len(fq_out) > fq_num):
         print(" -> Trying to sample!")
         fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
+        fq_i[-1] = -1  # Change last one to refer to final element
         fq_out = np.asarray(fq_out)
         return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
     else:

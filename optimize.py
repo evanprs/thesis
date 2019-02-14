@@ -74,21 +74,27 @@ class Bell():
                 s = xy.make_shape(pts, max_output_len=50)
             else:
                 s = xy.make_shape(pts, max_output_len=100)
-            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
 
             # If ng_vol had a memory error, fq will be empty
-            while (len(fq) <= 0):
-                # Attempt to force a self-intersection
-                # NOTE: This might be best in another try/catch block
-                print("Curve did not create a valid mesh")
-                s0 = np.random.shuffle(s[0])
-                s1 = np.random.shuffle(s[1])
-                s_pts = (s0, s1)
-                if self.grade == 'coarse':
-                    s = xy.make_shape(s_pts, max_output_len=50)
-                else:
-                    s = xy.make_shape(s_pts, max_output_len=100)
+            while True:
                 fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
+                if ( len(fq) > 0 ):
+                    break
+                else:
+                    # Attempt to force a self-intersection
+                    # NOTE: This might be best in another try/catch block
+                    print("Curve did not create a valid mesh")
+
+                    s0 = s[0]
+                    s1 = s[1]
+                    s0 = np.random.shuffle(s0)
+                    s1 = np.random.shuffle(s1)
+                    s_pts = (s0, s1)
+                    
+                    if self.grade == 'coarse':
+                        s = xy.make_shape(s_pts, max_output_len=50)
+                    else:
+                        s = xy.make_shape(s_pts, max_output_len=100)
             fq_nr = xy.find_frequencies(fq, self.target)
             fit = xy.fitness(fq_nr[:n_freq], self.target)
             xy.print_fitness_vals(fq_nr, self.target, fit)
