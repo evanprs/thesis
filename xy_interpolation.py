@@ -486,11 +486,14 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
-        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
-        if showshape:
-            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
-        else:
-            os.system('ccx ' + name + ' >> test.log')
+        try:
+            os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+            if showshape:
+                os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
+            else:
+                os.system('ccx ' + name + ' >> test.log')
+        except FileNotFoundError:
+            print(f"didn't find {name}.frd in {folder_path} during sim")
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -504,7 +507,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         try:
             os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         except FileNotFoundError:
-            print(f"didn't find {name}.frd in {folder_path}")
+            print(f"didn't find {name}.frd in {folder_path} after sim")
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -560,8 +563,8 @@ def find_frequencies(fq_curr, fq_trgt):
     fq_tol = 10  # Tolerance in Hz
     fq_tot = 0  # Internally track length of our array
 
-    # print("Frequencies (raw):")
-    # print(fq_curr)
+    print("Frequencies (raw):")
+    print(fq_curr)
 
     # Isoldate all potential frequencies in our window
     fq_out = []  # We know the max lenght, so it'd probably be best to fully allocate space to it right now
@@ -578,17 +581,17 @@ def find_frequencies(fq_curr, fq_trgt):
         elif ( fq > (fq_max + fq_tol) ):
             break
     
-    # print("Frequencies (pro):")
-    # print(fq_out)
+    print("Frequencies (pro):")
+    print(fq_out)
 
     # Isolate to "most likely" frequncies
     if (len(fq_out) > fq_num):
         print(" -> Trying to sample!")
-        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num))  # Indicies
+        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
         fq_out = np.asarray(fq_out)
         return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
     else:
-        # print(" -> No need to sample!")
+        print(" -> No need to sample!")
         return fq_out
 
 def print_fitness_vals(fq_curr, fq_trgt, fitness):
