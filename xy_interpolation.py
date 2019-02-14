@@ -553,25 +553,36 @@ def find_frequencies(fq_curr, fq_trgt):
     fq_tol = 10  # Tolerance in Hz
     fq_tot = 0  # Internally track length of our array
 
+    print("Frequencies (raw):")
+    print(fq_curr)
+
     # Isoldate all potential frequencies in our window
     fq_out = []  # We know the max lenght, so it'd probably be best to fully allocate space to it right now
     for fq in fq_curr:
         # Case A: Frequencies within our range
-        if ( ( fq > (fq_min - fq_tol)) and (fq < (fq_max + fq_tol)) ):
+        if ( ( fq > (fq_min - fq_tol) ) and ( fq < (fq_max + fq_tol) ) ):
             fq_out.append(fq)
             fq_tot += 1
         # Case B: Frequencies beyond our range, but when we haven't collected enough
         elif ( (fq_tot < fq_num ) and ( fq > (fq_max + fq_tol) ) ):
             fq_out.append(fq)
+            fq_tot += 1
         # Case C: Frequencies beyond our range, and when we're done
         elif ( fq > (fq_max + fq_tol) ):
             break
     
-    # Isolate to "most likely" freuqncies
-    fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
-    fq_out = np.asarray(fq_out)
-    
-    return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
+    print("Frequencies (pro):")
+    print(fq_out)
+
+    # Isolate to "most likely" frequncies
+    if (len(fq_out) > fq_num):
+        print(" -> Trying to sample!")
+        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
+        fq_out = np.asarray(fq_out)
+        return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
+    else:
+        print(" -> No need to sample!")
+        return fq_out
 
 def print_fitness_vals(fq_curr, fq_trgt, fitness):
     for f in range(len(fq_trgt)):
