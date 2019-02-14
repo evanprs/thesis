@@ -62,6 +62,8 @@ if __name__ == '__main__':
             bell.findOptimumCurve()
             bells.append(bell)
             pickle.dump(bells, open('bells.p', 'wb'))
-            if ( bell.best_fit < minimum_fitness ):
+            if ( bell.best_fit < fit_min ):
                 break
+            else:
+                params['simulation']['c0'] = bell.optpts
             i += 1
