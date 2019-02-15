@@ -60,7 +60,7 @@ if __name__ == '__main__':
         ]
     )
 
-    num_attempts = 5
+    num_attempts = 3
     num_targets = 1
     num_ratio = 1.067
     base_note = 440
@@ -120,8 +120,13 @@ if __name__ == '__main__':
     print(bell.best_fq)
     print("Points: ", end="")
     print(bell.optpts)
+    print("Comparison: ")
+    xy.print_fitness_vals(bell.best_fq, bell.target, bell.best_fit)
 
     print("\n\n\n")
     print("Geometry to write to DXF: ")
     print(bell.optpts)
+    print("Now writing to DXF... ", end="")
+    xy.pts_to_dxf(bell.optpts, "outputs/dxf/shape.dxf")
+    print(" ...file created!")
 

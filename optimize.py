@@ -97,8 +97,8 @@ class Bell():
                         s = xy.make_shape(s_pts, max_output_len=100)
             fq_nr = xy.find_frequencies(fq, self.target)
             fit = xy.fitness(fq_nr[:n_freq], self.target)
-            xy.print_fitness_vals(fq_nr, self.target, fit)
-            # print(fit)
+            # xy.print_fitness_vals(fq_nr, self.target, fit)
+            print(fit)
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
