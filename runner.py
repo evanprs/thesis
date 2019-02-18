@@ -160,21 +160,21 @@ if __name__ == '__main__':
     targets = [ target*( 2**( n/12.0 ) ) for n in range(num_targets) ]
 
     materials = {
-        "galvanized": {
-            "8": "4.269",
-            "9": "3.891",
-            "10": "3.510",
-            "11": "3.1318",
-            "12": "2.753",
-            "14": "1.9939",  # This and below is the !!DANGERZONE!!
-            "16": "1.6129",
-            "18": "1.310",
-            "20": "1.005",
-            "22": "0.853",
-            "24": "0.701",
-            "26": "0.551",
-            "28": "0.474",
-            "30": "0.398"
+        'galvanized': {
+            '8': '4.269',
+            '9': '3.891',
+            '10': '3.510',
+            '11': '3.1318',
+            '12': '2.753',
+            '14': '1.9939',  # This and below is the !!DANGERZONE!!
+            '16': '1.6129',
+            '18': '1.310',
+            '20': '1.005',
+            '22': '0.853',
+            '24': '0.701',
+            '26': '0.551',
+            '28': '0.474',
+            '30': '0.398'
         }
     }
 
@@ -191,10 +191,10 @@ if __name__ == '__main__':
     }
     
     params_simulation: {  # NOTE: values to be filled in from above
-        'thickness': str(materials[params_sheet["material"]][params_sheet["gauge"]]),
+        'thickness': str((materials[params_sheet['material']])[str(params_sheet['gauge'])]),
         'target': target,  # NOTE: must be an np.array
-        'elastic': str(params_sheet["modulus"])+","+str(params_sheet["ratio"]),
-        'density': str(params_sheet["density"]),
+        'elastic': str(params_sheet['modulus'])+","+str(params_sheet['ratio']),
+        'density': str(params_sheet['density']),
         'scale': 800,
         'grade': 'coarse',
         'ctrlpoints': 5,
