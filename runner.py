@@ -179,7 +179,7 @@ if __name__ == '__main__':
     }
 
     # Set up material/simulation properties
-    params_sheet: {
+    params_sheet = {
         'units': 'imperial',
         'material': 'galvanized',
         'density': 0.007850,
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         'gauge': 8
     }
     
-    params_simulation: {  # NOTE: values to be filled in from above
+    params_simulation = {  # NOTE: values to be filled in from above
         'thickness': str((materials[params_sheet['material']])[str(params_sheet['gauge'])]),
         'target': target,  # NOTE: must be an np.array
         'elastic': str(params_sheet['modulus'])+","+str(params_sheet['ratio']),
