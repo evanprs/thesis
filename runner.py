@@ -191,10 +191,10 @@ if __name__ == '__main__':
     }
     
     params_simulation = {  # NOTE: values to be filled in from above
-        'thickness': str((materials[params_sheet['material']])[str(params_sheet['gauge'])]),
+        'thickness': float((materials[params_sheet['material']])[str(params_sheet['gauge'])]),  # NOTE: must be a number
         'target': target,  # NOTE: must be an np.array
         'elastic': str(params_sheet['modulus'])+","+str(params_sheet['ratio']),
-        'density': str(params_sheet['density']),
+        'density': float(params_sheet['density']),
         'scale': 800,
         'grade': 'coarse',
         'ctrlpoints': 5,
