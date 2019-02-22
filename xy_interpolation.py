@@ -482,15 +482,23 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        make_inp(elastic, density)
+        make_inp(elastic, density, freqs=106)
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
-        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
-        if showshape:
-            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
-        else:
-            os.system('ccx ' + name + ' >> test.log')
+
+        ng_tries = 0
+        while ng_tries < 1:
+            try:
+                os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+                if showshape:
+                    os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
+                else:
+                    os.system('ccx ' + name + ' >> test.log')
+                ng_tries += 1
+            except FileNotFoundError:
+                ng_tries = 0
+                print(f"didn't find {name}.frd in {folder_path} during sim")
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -504,7 +512,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         try:
             os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         except FileNotFoundError:
-            print(f"didn't find {name}.frd in {folder_path}")
+            print(f"didn't find {name}.frd in {folder_path} after sim")
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -530,6 +538,66 @@ def fitness(fq_ideal, fq_actual):
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
+
+
+def find_frequencies(fq_curr, fq_trgt):
+    """
+    Takes full range of frequncies found, identifies the subset of frequencies
+    that correspond to the range of target frequencies. This set is bounded by
+    the number of target frequencies. When smaller it will force a larger set,
+    and when larger it will generate a subset of the subset.
+
+    Args:
+        fq_curr: full list of simulated frequency content
+        fq_trgt: set of target frequencies
+    
+    Returns:
+        fq: list of frequencies most likely to compare to target frequencies
+    """
+
+    fq_min = fq_trgt[0]
+    fq_max = fq_trgt[-1]
+    fq_num = len(fq_trgt)
+    fq_tol = 10  # Tolerance in Hz
+    fq_tot = 0  # Internally track length of our array
+
+    # print("Frequencies (raw):")
+    # print(fq_curr)
+
+    # Isoldate all potential frequencies in our window
+    fq_out = []  # We know the max lenght, so it'd probably be best to fully allocate space to it right now
+    for fq in fq_curr:
+        # Case A: Frequencies within our range
+        if ( ( fq > (fq_min - fq_tol) ) and ( fq < (fq_max + fq_tol) ) ):
+            fq_out.append(fq)
+            fq_tot += 1
+        # Case B: Frequencies beyond our range, but when we haven't collected enough
+        elif ( (fq_tot < fq_num ) and ( fq > (fq_max + fq_tol) ) ):
+            fq_out.append(fq)
+            fq_tot += 1
+        # Case C: Frequencies beyond our range, and when we're done
+        elif ( fq > (fq_max + fq_tol) ):
+            break
+    
+    # print("Frequencies (pro):")
+    # print(fq_out)
+
+    # Isolate to "most likely" frequncies
+    if (len(fq_out) > fq_num):
+        # print(" -> Trying to sample!")
+        fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
+        fq_i[-1] = -1  # Change last one to refer to final element
+        fq_out = np.asarray(fq_out)
+        return fq_out[fq_i.astype(int).tolist()].tolist()  # Using numpy for easy indexing
+    else:
+        # print(" -> No need to sample!")
+        return fq_out
+
+def print_fitness_vals(fq_curr, fq_trgt, fitness):
+    for f in range(len(fq_trgt)):
+        print(f"| {round(fq_trgt[f], 3)} - {round(fq_curr[f], 3)} | = {round(abs(fq_trgt[f] - fq_curr[f]), 3)}")
+    print(f"Fitness: {fitness}\n")
+    return
 
 
 if __name__ == "__main__":
