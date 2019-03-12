@@ -78,12 +78,16 @@ class Bell():
             # If ng_vol had a memory error, fq will be empty
             while True:
                 fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
+                t_c = 0
                 if ( len(fq) > 0 ):
+                    if (t_c > 1):
+                        print(f"attempts at a shape: {t_c}")
                     break
                 else:
                     # Attempt to force a self-intersection
                     # NOTE: This might be best in another try/catch block
                     print("Curve did not create a valid mesh")
+                    t_c += 1
 
                     s0 = s[0]
                     s1 = s[1]
@@ -127,7 +131,7 @@ class Bell():
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=5)  # Max Iter @ 10 to provide "quick" feedback
+                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=50)  # Max Iter @ 10 to provide "quick" feedback
        
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):

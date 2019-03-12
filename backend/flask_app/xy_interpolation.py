@@ -6,6 +6,7 @@ from itertools import combinations
 import os
 import subprocess
 from dxfwrite import DXFEngine as dxf
+from shape_generators import *
 
 # Globals to activate debug code
 SHOW_STEPS = False
@@ -583,6 +584,8 @@ def find_frequencies(fq_curr, fq_trgt):
     # print(fq_out)
 
     # Isolate to "most likely" frequncies
+    # NOTE: Sampling criteria should be set /in accordance/ to the target frequencies
+    #     (since frequencies are NOT on a linear scale, so a simple chi2 isn't best fit)
     if (len(fq_out) > fq_num):
         # print(" -> Trying to sample!")
         fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies
