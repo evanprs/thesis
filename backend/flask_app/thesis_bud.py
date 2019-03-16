@@ -194,15 +194,23 @@ def get_cll_to_ths():
 
     if inp['custom-shape']:
         prm['c0'] = pts
-        return str(pts)
+        # return str(pts)
 
     bells = []
+    count_att = 0
     b = Bell(**prm)
+    # while (count_att < 1):
+        # try:
     b.findOptimumCurve()
+            # count_att += 1
+        # except AssertionError:
+        #     count_att = 0
+        # except TypeError:
+        #     count_att = 0
     bells.append(b)
     
-    res['version'] = b.version
-    res['target'] = b.target
+    # res['version'] = b.version
+    # res['target'] = b.target
     res['thickness'] = b.thickness
     # res['elastic'] = b.elastic
     # res['density'] = b.density
@@ -217,6 +225,11 @@ def get_cll_to_ths():
     res['fit'] = float(b.best_fit)
     res['frequencies'] = b.best_fq
     # res['frequencies'] = b.best_fq
+
+    app.logger.info("==========================================================")
+    app.logger.info("got this output:")
+    app.logger.info(str(res))
+    app.logger.info("==========================================================")
 
     return jsonify(res)
 

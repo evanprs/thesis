@@ -2,45 +2,6 @@ import numpy as np
 import xy_interpolation as xy
 from random import random
 
-
-"""
-		function gen_nodal_base(diameter_transducer = 240, radius_extension = (diameter_transducer/2)) {
-
-			// Prepare variables
-			circle_bound_plr_low = 0;
-			circle_bound_plr_upp = Math.PI;
-			circle_bound_num_low = 0;
-			circle_bound_num_upp = 9;
-			circle_bound_num = 9;
-			// circle_bound_plr_low = -1*Math.PI/2;
-			// circle_bound_plr_upp = 3*Math.PI/2;
-			// circle_bound_num_low = 2;
-			// circle_bound_num_upp = 11;
-			// circle_bound_num = 13;
-			radius_transducer = diameter_transducer / 2;
-			radius_separation = nj.linspace(circle_bound_plr_low, circle_bound_plr_upp, circle_bound_num);
-			points = {
-				x: [],
-				y: []
-			};
-
-			// Create upper semicircle
-			for (ii = circle_bound_num_low; ii < circle_bound_num_upp; ii++) {
-				points.x.push(radius_extension * Math.cos(radius_separation[ii]));
-				points.y.push(radius_extension * Math.sin(radius_separation[ii]));
-			}
-
-			// Translate to origin at "merge point"
-			for (ii = 0; ii < points.x.length; ii++) {
-				points.y[ii] += radius_transducer;
-			}
-
-			// Prepare to export
-			return points;
-		}
-
-"""
-
 def ptl_find_thinner_half(pts):
 	"""
 	Determines if a petal's source is pointed down or up
@@ -205,3 +166,7 @@ def make_random_petal(max_wth=25, max_len=100, base_d=240, extn_d=120, max_out_l
 			fail_counter += 1
 	return True
 
+
+
+def gen_petal(num_points=4, length=500, width_scale=0.2, diameter_transducer=240, radius_extension=120, max_out_len=100, variant="curve", deviation_factor=0):
+	return False

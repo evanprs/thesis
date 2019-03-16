@@ -483,7 +483,9 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        make_inp(elastic, density, freqs=106)
+        # num_freqs_to_sim = 106
+        num_freqs_to_sim = 36
+        make_inp(elastic, density, freqs=num_freqs_to_sim)
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
@@ -498,7 +500,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
                     os.system('ccx ' + name + ' >> test.log')
                 ng_tries += 1
             except FileNotFoundError:
-                ng_tries = 0
+                ng_tries += 1
                 print(f"didn't find {name}.frd in {folder_path} during sim")
 
         try: # TODO - tweak the intersection criteria so that this happens less

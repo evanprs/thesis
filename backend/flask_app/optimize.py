@@ -78,36 +78,51 @@ class Bell():
             # If ng_vol had a memory error, fq will be empty
             while True:
                 fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
-                t_c = 0
-                if ( len(fq) > 0 ):
-                    if (t_c > 1):
-                        print(f"attempts at a shape: {t_c}")
-                    break
-                else:
-                    # Attempt to force a self-intersection
-                    # NOTE: This might be best in another try/catch block
-                    print("Curve did not create a valid mesh")
-                    t_c += 1
+                break
+                # t_c = 0
+                # if ( len(fq) > 0 ):
+                #     if (t_c > 1):
+                #         print(f"attempts at a shape: {t_c}")
+                #     break
+                # else:
+                #     # Attempt to force a self-intersection
+                #     # NOTE: This might be best in another try/catch block
+                #     print("Curve did not create a valid mesh")
+                #     t_c += 1
 
-                    s0 = s[0]
-                    s1 = s[1]
-                    s0 = np.random.shuffle(s0)
-                    s1 = np.random.shuffle(s1)
-                    s_pts = (s0, s1)
+                #     s0 = s[0]
+                #     s1 = s[1]
+                #     s0 = np.random.shuffle(s0)
+                #     s1 = np.random.shuffle(s1)
+                #     s_pts = (s0, s1)
                     
-                    if self.grade == 'coarse':
-                        s = xy.make_shape(s_pts, max_output_len=50)
-                    else:
-                        s = xy.make_shape(s_pts, max_output_len=100)
+                #     if self.grade == 'coarse':
+                #         s = xy.make_shape(s_pts, max_output_len=50)
+                #     else:
+                #         s = xy.make_shape(s_pts, max_output_len=100)
             fq_nr = xy.find_frequencies(fq, self.target)
             fit = xy.fitness(fq_nr[:n_freq], self.target)
-            # xy.print_fitness_vals(fq_nr, self.target, fit)
+            xy.print_fitness_vals(fq_nr, self.target, fit)
             print(fit)
+            print("@shape: ", end="")
+            print(pts)
+            print("\n\n")
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
+        # Don't do that weird thing, just throw the other catches down here!
+        #   (that's kinda the point of this crosspenalty)
         except ValueError as err:
             # if you give a constant value, the algorithm thinks it's finished
+            print(err)
+            return crosspenalty * (random()+1)
+        except FileNotFoundError as err:
+            print(err)
+            return crosspenalty * (random()+1)
+        except AssertionError as err:
+            print(err)
+            return crosspenalty * (random()+1)
+        except TypeError as err:
             print(err)
             return crosspenalty * (random()+1)
 
