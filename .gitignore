@@ -8,6 +8,7 @@
 *.inp
 *.b
 *.p
+*.dxf
 
 # Config files
 .vscode/

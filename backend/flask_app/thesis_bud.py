@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, send_file
 import requests
 
 #sim sim sim
@@ -54,6 +54,66 @@ def get_pts_of_shp():
 def gen_ptl_shp():
     fit_pts, pts = xy.make_random_petal(scale=840, base_d=120, extn_d=30, max_wth=20)
     return str(pts)
+
+@app.route('/api/gen_ptl_neue', methods=['POST'])
+def gen_ptl_pts():
+
+    inp = request.get_json()
+    prm = {}
+    res = {}
+
+    if ('num_points_upper' in inp) and ('num_points_lower' in inp):
+        prm['num_points_lower'] = int(inp['num_points_lower'])
+        prm['num_points_upper'] = int(inp['num_points_upper'])
+        prm['num_points'] = int(inp['num_points_upper']) + int(inp['num_points_lower'])
+    elif ('num_points' in inp):
+        prm['num_points_lower'] = int(round(inp['num_points']/2, 0))
+        prm['num_points_upper'] = int(round(inp['num_points']/2, 0))
+        prm['num_points'] = int(inp['num_points'])
+    
+    if ('width_scale' in inp):
+        prm['width_scale'] = float(inp['width_scale'])
+    
+    if ('length' in inp):
+        prm['length'] = float(inp['length'])
+    
+    if ('length_upper' in inp):
+        prm['length_upper'] = float(inp['length_upper'])
+    
+    if ('length_lower' in inp):
+        prm['length_lower'] = float(inp['length_lower'])
+    
+    if ('diameter_transducer' in inp):
+        prm['diameter_transducer'] = float(inp['diameter_transducer'])
+    
+    if ('radius_extension' in inp):
+        prm['radius_extension'] = float(inp['radius_extension'])
+    
+    if ('deviation_factor' in inp):
+        prm['deviation_factor'] = float(inp['deviation_factor'])
+    
+    if ('max_out_len' in inp):
+        prm['max_out_len'] = int(inp['max_out_len'])
+
+    if inp['variant'] not in ["curve", "point", "standard", "custom"]:
+        raise TypeError("ERROR: Selected variant not supported")
+    else:
+        prm['variant'] = str(inp['variant'])
+
+    fit_pts, pts = xy.gen_petal(**prm)
+
+    # ==========
+    # hoping to offload this part onto a separate get_dxf() foo
+    # ==========
+    xy.pts_to_dxf(pts)
+    return send_file("test.dxf", as_attachment=True)
+
+    # return Response(generate(), mimetype='text/csv')
+    # return Response(xy.pts_to_dxf(pts),
+    #                     mimetype="application/dxf",
+    #                     headers={
+    #                         "Content-Disposition":"attachment;filename=test.dxf"
+    #                     })
 
 @app.route('/api/get_cll_to_tst')
 def get_cll_to_tst():

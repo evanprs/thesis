@@ -63,6 +63,14 @@ def translate_base(pts, dist):
 
 
 
+def translate_shape_up(pts, dist):
+	for n in range(len(pts[0])):
+		pts[1][n] += dist
+	
+	return pts
+
+
+
 def make_base(base_d=240, max_out_len=100):
 	base_r = base_d / 2
 	base_t = np.linspace(-1*np.pi/2,3*np.pi/2, 13)
@@ -168,5 +176,119 @@ def make_random_petal(max_wth=25, max_len=100, base_d=240, extn_d=120, max_out_l
 
 
 
-def gen_petal(num_points=4, length=500, width_scale=0.2, diameter_transducer=240, radius_extension=120, max_out_len=100, variant="curve", deviation_factor=0):
-	return False
+def pick_val(base_l, base_u, vary):
+	return np.random.uniform(base_l*(1-vary), base_u*(1+vary))
+
+
+
+def gen_petal(
+ num_points=4, num_points_upper=2, num_points_lower=2,
+ width_scale=0.25, length=1000, length_upper=-1, length_lower=-1,
+ diameter_transducer=240, radius_extension=120,
+ variant="curve", deviation_factor=0,
+ max_out_len=100
+ ):
+
+	if not isinstance(num_points, int):
+		raise TypeError("ERROR: Number of points must be integer")
+	if variant not in ["curve", "point", "standard", "custom"]:
+		raise TypeError("ERROR: Selected variant not supported")
+	
+	if variant not in "custom":
+		if variant in "point":
+			deviation_factor = 0.20
+		elif variant in "curve":
+			deviation_factor = 0.10
+		elif variant in "standard":
+			deviation_factor = 0.00
+
+	# Variable assignment
+	if num_points is not (num_points_upper + num_points_lower):
+		num_points_upper = int(round(num_points/2, 0))
+		num_points_lower = int(round(num_points/2, 0))
+
+	if length_lower is -1:
+		length_lower = 1.5*width_scale
+	if length_upper is -1:
+		length_upper = 1 - length_lower
+
+	scale_w = (width_scale*length)/2
+	scale_l = length
+
+	valid_shape = False
+	counter_fail = 0
+
+	while not valid_shape:
+		try:
+			# Determine length proportions
+			p_lower = pick_val(length_lower, length_lower, deviation_factor)
+			p_upper = 1 - p_lower
+			
+			# Create lower half r and t
+			t_lower = np.linspace(-1*(1/2)*np.pi, 0, 1+num_points_lower, endpoint=False)
+			# t_lower = np.delete(t_lower, 0)
+			r_lower = np.array(p_lower*scale_l)
+			# r_lower = np.array([])
+			for ii in range(len(t_lower) - 1):
+				scale_bound_l = min(p_lower*scale_l, scale_w)
+				scale_bound_u = max(p_lower*scale_l, scale_w)
+				scale_bound_d = scale_bound_u - scale_bound_l
+				scale_bound_b = np.random.beta(3, 2)
+
+				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+				while (r_curr*np.cos(t_lower[ii+1]) > scale_w):
+					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+
+				r_lower = np.append(r_lower, r_curr)
+			r_lower.sort()
+			r_lower = np.flip(r_lower)
+
+			# Create upper half r and t
+			t_upper = np.linspace(0, (1/2)*np.pi, 1+num_points_upper, endpoint=False)
+			# t_upper = np.delete(t_upper, 0)
+			r_upper = np.array(scale_w)
+			for ii in range(len(t_upper) - 1):
+				scale_bound_l = min(p_upper*scale_l, scale_w)
+				scale_bound_u = max(p_upper*scale_l, scale_w)
+				scale_bound_d = scale_bound_u - scale_bound_l
+				scale_bound_b = np.random.beta(2, 2)
+
+				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+				while (r_curr*np.cos(t_upper[ii+1]) > scale_w):
+					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+
+				r_upper = np.append(r_upper, r_curr)
+			r_upper.sort()
+
+			# Create xs and ys
+			rs = np.concatenate((r_lower, r_upper))
+			ts = np.concatenate((t_lower, t_upper))
+
+			# Generate right side of petal
+			xs_r = rs*np.cos(ts)
+			ys_r = rs*np.sin(ts)
+
+			# Generate base of petal
+			b_pts = gen_nodal_base(diameter_transducer, radius_extension)
+			b_pts = translate_shape_up(b_pts, p_upper*scale_l)
+
+			# Generate left side of petal
+			xs_l = -1*np.flip(xs_r[1:])
+			ys_l = np.flip(ys_r[1:])
+
+			# Connect parts
+			xs = np.append(xs_r, b_pts[0])
+			xs = np.append(xs, xs_l)
+			ys = np.append(ys_r, b_pts[1])
+			ys = np.append(ys, ys_l)
+
+			# Touchups
+			pts = translate_shape_up((xs, ys), p_lower*scale_l)
+			fit_pts = xy.make_shape(pts, max_out_len)
+
+			return fit_pts, pts
+		except ValueError:
+			counter_fail += 1
+
+
+
