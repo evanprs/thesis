@@ -55,6 +55,14 @@ def gen_ptl_shp():
     fit_pts, pts = xy.make_random_petal(scale=840, base_d=120, extn_d=30, max_wth=20)
     return str(pts)
 
+@app.route('/api/gen_ptl_neue')
+def gen_ptl_pts():
+    a = 2
+    b = 3
+    c = a + b
+    fit_pts, pts = xy.gen_petal(num_points_upper=a, num_points_lower=b, num_points=c, variant="standard")
+    return str(pts)
+
 @app.route('/api/get_cll_to_tst')
 def get_cll_to_tst():
     b = runit()

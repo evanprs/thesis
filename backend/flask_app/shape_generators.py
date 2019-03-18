@@ -168,5 +168,60 @@ def make_random_petal(max_wth=25, max_len=100, base_d=240, extn_d=120, max_out_l
 
 
 
-def gen_petal(num_points=4, length=500, width_scale=0.2, diameter_transducer=240, radius_extension=120, max_out_len=100, variant="curve", deviation_factor=0):
-	return False
+def gen_petal(
+ num_points=4, num_points_upper=2, num_points_lower=2,
+ width_scale=0.20, length=500, length_upper=0.75, length_lower=0.25,
+ diameter_transducer=240, radius_extension=120,
+ variant="curve", deviation_factor=0,
+ max_out_len=100
+ ):
+
+	if not isinstance(num_points, int):
+		raise TypeError("ERROR: Number of points must be integer")
+	if variant not in ["curve", "point", "standard", "custom"]:
+		raise TypeError("ERROR: Selected variant not supported")
+	
+	if variant not in "custom":
+		if variant in "point":
+			deviation_factor = 0.20
+		elif variant in "curve":
+			deviation_factor = 0.10
+		elif variant in "standard":
+			deviation_factor = 0.00
+		
+
+	
+	# Variable assignment
+	if num_points is not (num_points_upper + num_points_lower):
+		num_points_upper = int(round(num_points/2, 0))
+		num_points_lower = int(round(num_points/2, 0))
+		# return False, str((num_points_upper, num_points_lower))
+
+	scale_w = width_scale/2
+	scale_l = length
+
+	valid_shape = False
+	counter_fail = 0
+
+	while not valid_shape:
+		try:
+			# Determine length proportions
+			p_lower = np.random.uniform(length_lower*(1-deviation_factor), length_lower*(1+deviation_factor))
+			
+			# Create lower half
+			s_lower = np.linspace(0, -1*(1/2)*np.pi, 1+num_points_lower, endpoint=False)
+			s_lower = np.delete(s_lower, 0)
+
+			# Create upper half
+			s_upper = np.linspace(0, (1/2)*np.pi, 1+num_points_upper, endpoint=False)
+			s_upper = np.delete(s_upper, 0)
+
+			return False, str(np.concatenate((s_lower, s_upper)))
+			
+
+			# Build lower portion of petal
+			return False, True
+		except ValueError:
+			counter_fail += 1
+	
+	return False, False
