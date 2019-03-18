@@ -55,12 +55,57 @@ def gen_ptl_shp():
     fit_pts, pts = xy.make_random_petal(scale=840, base_d=120, extn_d=30, max_wth=20)
     return str(pts)
 
-@app.route('/api/gen_ptl_neue')
+@app.route('/api/gen_ptl_neue', methods=['POST'])
 def gen_ptl_pts():
-    a = 3
-    b = 5
-    c = a + b
-    fit_pts, pts = xy.gen_petal(num_points_upper=a, num_points_lower=b, num_points=c, length_upper=0.60, length_lower=0.30, diameter_transducer=120, radius_extension=30, length=838, variant="standard")
+
+    inp = request.get_json()
+    prm = {}
+    res = {}
+
+    if ('num_points_upper' in inp) and ('num_points_lower' in inp):
+        prm['num_points_lower'] = int(inp['num_points_lower'])
+        prm['num_points_upper'] = int(inp['num_points_upper'])
+        prm['num_points'] = int(inp['num_points_upper']) + int(inp['num_points_lower'])
+    elif ('num_points' in inp):
+        prm['num_points_lower'] = int(round(inp['num_points']/2, 0))
+        prm['num_points_upper'] = int(round(inp['num_points']/2, 0))
+        prm['num_points'] = int(inp['num_points'])
+    
+    if ('width_scale' in inp):
+        prm['width_scale'] = float(inp['width_scale'])
+    
+    if ('length' in inp):
+        prm['length'] = float(inp['length'])
+    
+    if ('length_upper' in inp):
+        prm['length_upper'] = float(inp['length_upper'])
+    
+    if ('length_lower' in inp):
+        prm['length_lower'] = float(inp['length_lower'])
+    
+    if ('diameter_transducer' in inp):
+        prm['diameter_transducer'] = float(inp['diameter_transducer'])
+    
+    if ('radius_extension' in inp):
+        prm['radius_extension'] = float(inp['radius_extension'])
+    
+    if ('deviation_factor' in inp):
+        prm['deviation_factor'] = float(inp['deviation_factor'])
+    
+    if ('max_out_len' in inp):
+        prm['max_out_len'] = int(inp['max_out_len'])
+
+    if inp['variant'] not in ["curve", "point", "standard", "custom"]:
+        raise TypeError("ERROR: Selected variant not supported")
+    else:
+        prm['variant'] = str(inp['variant'])
+
+    # a = 3
+    # b = 5
+    # c = a + b
+    # fit_pts, pts = xy.gen_petal(num_points_upper=a, num_points_lower=b, num_points=c, length_upper=0.60, length_lower=0.30, diameter_transducer=120, radius_extension=30, length=838, variant="standard")
+
+    fit_pts, pts = xy.gen_petal(**prm)
     return str(pts)
 
 @app.route('/api/get_cll_to_tst')
