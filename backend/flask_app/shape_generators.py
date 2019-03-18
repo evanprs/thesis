@@ -208,12 +208,8 @@ def gen_petal(
 		num_points_lower = int(round(num_points/2, 0))
 
 	if length_lower is -1:
-		length_lower = 0.25
-	else:
 		length_lower = 1.5*width_scale
 	if length_upper is -1:
-		length_upper = 0.75
-	else:
 		length_upper = 1 - length_lower
 
 	scale_w = (width_scale*length)/2

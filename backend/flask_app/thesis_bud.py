@@ -102,6 +102,9 @@ def gen_ptl_pts():
 
     fit_pts, pts = xy.gen_petal(**prm)
 
+    # ==========
+    # hoping to offload this part onto a separate get_dxf() foo
+    # ==========
     xy.pts_to_dxf(pts)
     return send_file("test.dxf", as_attachment=True)
 
@@ -111,13 +114,6 @@ def gen_ptl_pts():
     #                     headers={
     #                         "Content-Disposition":"attachment;filename=test.dxf"
     #                     })
-
-@app.route('/large.csv')
-def generate_large_csv():
-    def generate():
-        for row in iter_all_rows():
-            yield ','.join(row) + '\n'
-    return Response(generate(), mimetype='text/csv')
 
 @app.route('/api/get_cll_to_tst')
 def get_cll_to_tst():
