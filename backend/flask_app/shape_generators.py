@@ -185,7 +185,7 @@ def gen_petal(
  num_points=4, num_points_upper=2, num_points_lower=2,
  width_scale=0.25, length=1000, length_upper=-1, length_lower=-1,
  diameter_transducer=240, radius_extension=120,
- variant="curve", deviation_factor=0,
+ variant="curve", deviation_factor=0, symmetric=True,
  max_out_len=100
  ):
 
@@ -254,11 +254,11 @@ def gen_petal(
 				scale_bound_b = np.random.beta(2, 2)
 
 				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-				while (r_curr*np.cos(t_upper[ii+1]) > scale_w):
+				while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < (diameter_transducer/2)) ):
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
 
 				r_upper = np.append(r_upper, r_curr)
-			r_upper.sort()
+			# r_upper.sort()
 
 			# Create xs and ys
 			rs = np.concatenate((r_lower, r_upper))
@@ -272,9 +272,57 @@ def gen_petal(
 			b_pts = gen_nodal_base(diameter_transducer, radius_extension)
 			b_pts = translate_shape_up(b_pts, p_upper*scale_l)
 
-			# Generate left side of petal
-			xs_l = -1*np.flip(xs_r[1:])
-			ys_l = np.flip(ys_r[1:])
+			if symmetric:
+				# Generate left side of petal
+				xs_l = -1*np.flip(xs_r[1:])
+				ys_l = np.flip(ys_r[1:])
+			else:
+				# Create lower half r and t
+				t_lower = np.linspace(-1*(1/2)*np.pi, 0, 1+num_points_lower, endpoint=False)
+				# t_lower = np.delete(t_lower, 0)
+				r_lower = np.array(p_lower*scale_l)
+				# r_lower = np.array([])
+				for ii in range(len(t_lower) - 1):
+					scale_bound_l = min(p_lower*scale_l, scale_w)
+					scale_bound_u = max(p_lower*scale_l, scale_w)
+					scale_bound_d = scale_bound_u - scale_bound_l
+					scale_bound_b = np.random.beta(3, 2)
+
+					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+					while (r_curr*np.cos(t_lower[ii+1]) > scale_w):
+						r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+
+					r_lower = np.append(r_lower, r_curr)
+				r_lower.sort()
+				r_lower = np.flip(r_lower)
+
+				# Create upper half r and t
+				t_upper = np.linspace(0, (1/2)*np.pi, 1+num_points_upper, endpoint=False)
+				# t_upper = np.delete(t_upper, 0)
+				r_upper = np.array(scale_w)
+				for ii in range(len(t_upper) - 1):
+					scale_bound_l = min(p_upper*scale_l, scale_w)
+					scale_bound_u = max(p_upper*scale_l, scale_w)
+					scale_bound_d = scale_bound_u - scale_bound_l
+					scale_bound_b = np.random.beta(2, 2)
+
+					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+					while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < (diameter_transducer/2)) ):
+						r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+
+					r_upper = np.append(r_upper, r_curr)
+				# r_upper.sort()
+
+				# Create xs and ys
+				rs = np.concatenate((r_lower, r_upper))
+				ts = np.concatenate((t_lower, t_upper))
+
+				# Generate right side of petal
+				xs_l = rs*np.cos(ts)
+				ys_l = rs*np.sin(ts)
+
+				xs_l = -1*np.flip(xs_l[1:])
+				ys_l = np.flip(ys_l[1:])
 
 			# Connect parts
 			xs = np.append(xs_r, b_pts[0])
