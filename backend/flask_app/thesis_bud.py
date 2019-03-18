@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, send_file
 import requests
 
 #sim sim sim
@@ -100,13 +100,24 @@ def gen_ptl_pts():
     else:
         prm['variant'] = str(inp['variant'])
 
-    # a = 3
-    # b = 5
-    # c = a + b
-    # fit_pts, pts = xy.gen_petal(num_points_upper=a, num_points_lower=b, num_points=c, length_upper=0.60, length_lower=0.30, diameter_transducer=120, radius_extension=30, length=838, variant="standard")
-
     fit_pts, pts = xy.gen_petal(**prm)
-    return str(pts)
+
+    xy.pts_to_dxf(pts)
+    return send_file("test.dxf", as_attachment=True)
+
+    # return Response(generate(), mimetype='text/csv')
+    # return Response(xy.pts_to_dxf(pts),
+    #                     mimetype="application/dxf",
+    #                     headers={
+    #                         "Content-Disposition":"attachment;filename=test.dxf"
+    #                     })
+
+@app.route('/large.csv')
+def generate_large_csv():
+    def generate():
+        for row in iter_all_rows():
+            yield ','.join(row) + '\n'
+    return Response(generate(), mimetype='text/csv')
 
 @app.route('/api/get_cll_to_tst')
 def get_cll_to_tst():
