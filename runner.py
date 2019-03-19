@@ -1,6 +1,6 @@
 from optimize import *
 
-if __name__ == '__main__':
+def runit():
 
     """
     shape_curve = (
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         ]
     )
 
-    num_attempts = 2  # Usually two tries is enough to get near enough to our targets
+    num_attempts = 1  # Usually two tries is enough to get near enough to our targets
     num_targets = 1
     num_ratio = 1.067
     base_note = 440
@@ -166,7 +166,7 @@ if __name__ == '__main__':
             '10': '3.510',
             '11': '3.1318',
             '12': '2.753',
-            '14': '1.9939',  # This and below is the !!DANGERZONE!!
+            '14': '1.9939',  # NOTE: This and below is the !!DANGERZONE!!
             '16': '1.6129',
             '18': '1.310',
             '20': '1.005',
@@ -233,7 +233,13 @@ if __name__ == '__main__':
     print("\n\n\n")
     print("Geometry to write to DXF: ")
     print(bell.optpts)
+    """
     print("Now writing to DXF... ", end="")
     xy.pts_to_dxf(bell.optpts, "outputs/dxf/shape.dxf")
     print(" ...file created!")
+    """
 
+    return bell.optpts
+    
+if __name__ == '__main__':
+    runit()

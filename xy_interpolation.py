@@ -6,6 +6,7 @@ from itertools import combinations
 import os
 import subprocess
 from dxfwrite import DXFEngine as dxf
+from shape_generators import *
 
 # Globals to activate debug code
 SHOW_STEPS = False
@@ -482,7 +483,9 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        make_inp(elastic, density, freqs=106)
+        # num_freqs_to_sim = 106
+        num_freqs_to_sim = 36
+        make_inp(elastic, density, freqs=num_freqs_to_sim)
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
@@ -497,7 +500,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
                     os.system('ccx ' + name + ' >> test.log')
                 ng_tries += 1
             except FileNotFoundError:
-                ng_tries = 0
+                ng_tries += 1
                 print(f"didn't find {name}.frd in {folder_path} during sim")
 
         try: # TODO - tweak the intersection criteria so that this happens less
@@ -583,6 +586,8 @@ def find_frequencies(fq_curr, fq_trgt):
     # print(fq_out)
 
     # Isolate to "most likely" frequncies
+    # NOTE: Sampling criteria should be set /in accordance/ to the target frequencies
+    #     (since frequencies are NOT on a linear scale, so a simple chi2 isn't best fit)
     if (len(fq_out) > fq_num):
         # print(" -> Trying to sample!")
         fq_i = np.ceil(np.linspace(0, len(fq_out), fq_num, endpoint=False))  # Indicies

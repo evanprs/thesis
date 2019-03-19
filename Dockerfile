@@ -36,13 +36,15 @@ RUN apt-add-repository universe \
 	&& apt-get update --yes
 
 # Install python
-RUN apt-get update \
-	&& apt-get --yes --no-install-recommends install \
-		python3 python3-dev \
-		python3-pip python3-venv python3-wheel python3-setuptools \
-		build-essential \
-		git \
-	&& rm -rf /var/lib/apt/lists/*
+RUN apt-get -yqq update
+RUN apt-get -yqq install python3-pip python3-dev curl gnupg
+#RUN apt-get update \
+#	&& apt-get --yes --no-install-recommends install \
+#		python3 python3-dev \
+#		python3-pip python3-venv python3-wheel python3-setuptools \
+#		build-essential \
+#		git \
+#	&& rm -rf /var/lib/apt/lists/*
 
 # Install netgen-mesher from source (via sourceforge)
 ENV ngp "/usr/local/netgen_install"
@@ -79,12 +81,14 @@ RUN apt-add-repository universe \
 	&& apt-get install --yes vim \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Get the package
-#RUN git clone https://github.com/arinconl/thesis.git /app/thesis
-COPY . ./app
+# Attach our code copied
+ADD flask_app /opt/flask_app
+WORKDIR /opt/flask_app
 
-# Install python dependencies (NOTE: should be migrated to pipenv)
-RUN pip3 install --no-cache-dir -r /app/requirements.txt
+# Install python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+EXPOSE 5000
 
 # Command to run app
-CMD ["python3", "/app/runner.py"]
+CMD ["python3", "./thesis_bud.py"]
