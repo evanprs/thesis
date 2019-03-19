@@ -8,4 +8,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./flask_app:/opt/flask_app
+      - ./optimize:/opt/optimize

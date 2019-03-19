@@ -22,45 +22,15 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Looking golden ponyboy\n"
-
-@app.route('/bc')
-def bc():
-    p = {
-        'thickness': 6.35,
-        'ctrlpoints': 5,
-        'grade': 'coarse',
-        'scale': 300,
-    }
-    t = np.array([ 400. , 440., 500. ])
-    b = Bell(t, **p)
-    
-    return str(b.c0)+"\n"
-
-@app.route('/api/get_pts_of_shp')
-def get_pts_of_shp():
-    p = {
-        'thickness': 4.269,
-        'ctrlpoints': 5,
-        'grade': 'coarse',
-        'scale': 800,
-    }
-    t = np.array([ 440*[ 0.5, 1., 1.2, 1.5 ] ])
-    b = Bell(t, **p)
-
-    return str(b.c0)+"\n"
-
-@app.route('/api/gen_ptl_shp')
-def gen_ptl_shp():
-    fit_pts, pts = xy.make_random_petal(scale=840, base_d=120, extn_d=30, max_wth=20)
-    return str(pts)
+    return "boop!"
 
 @app.route('/api/gen_ptl_neue', methods=['POST'])
 def gen_ptl_pts():
 
+    # Get our input
     inp = request.get_json()
+    # Prepare params
     prm = {}
-    res = {}
 
     if ('num_points_upper' in inp) and ('num_points_lower' in inp):
         prm['num_points_lower'] = int(inp['num_points_lower'])
@@ -99,13 +69,23 @@ def gen_ptl_pts():
         raise TypeError("ERROR: Selected variant not supported")
     else:
         prm['variant'] = str(inp['variant'])
+    
+    if ('symmetric' in inp):
+        if str(inp['symmetric']) in ["true", "True", "TRUE"]:
+            prm['symmetric'] = True
+        else:
+            prm['symmetric'] = False
 
+    # Generate shape as (x, y)
     fit_pts, pts = xy.gen_petal(**prm)
 
     # ==========
     # hoping to offload this part onto a separate get_dxf() foo
     # ==========
+    # Generate dxf file from points
     xy.pts_to_dxf(pts)
+    
+    # Download dxf file to client
     return send_file("test.dxf", as_attachment=True)
 
     # return Response(generate(), mimetype='text/csv')
