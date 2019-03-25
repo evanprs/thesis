@@ -5,6 +5,8 @@ from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
 
+from thesis_bud import app
+
 VERSION = '1.2'
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
@@ -54,7 +56,7 @@ class Bell():
 
         
         
-    def evalFitness(self, flatpts, crosspenalty=100.0*1000):
+    def evalFitness(self, flatpts, crosspenalty=100.0*1000, single_sim=False, num_freqs_to_sim=36):
         """
         Fitness of points defining curve. Needs flattened points for use with fmin
 
@@ -77,7 +79,7 @@ class Bell():
 
             # If ng_vol had a memory error, fq will be empty
             while True:
-                fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
+                fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, num_freqs_to_sim=num_freqs_to_sim)
                 break
                 # t_c = 0
                 # if ( len(fq) > 0 ):
@@ -109,7 +111,10 @@ class Bell():
             print("\n\n")
             self.fits.append(fit)
             self.fqs.append(fq)
-            return fit
+            if single_sim:
+                return fit, fq
+            else:
+                return fit
         # Don't do that weird thing, just throw the other catches down here!
         #   (that's kinda the point of this crosspenalty)
         except ValueError as err:
@@ -126,6 +131,25 @@ class Bell():
             print(err)
             return crosspenalty * (random()+1)
 
+
+    def singleSimulation(self, num_freqs_to_sim=50):
+        x, y = self.c0
+        flatpts = np.append(x, y)
+        if self.grade == 'coarse':
+            ftol = 1.0
+            xtol = 1.0
+        else:
+            ftol = .1
+            xtol = .1
+
+        fit, freqs = self.evalFitness(flatpts, single_sim=True, num_freqs_to_sim=num_freqs_to_sim)
+
+        res = {
+            'fit': fit,
+            'frequencies': freqs
+        }
+
+        return res
 
     def findOptimumCurve(self):
         """

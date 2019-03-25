@@ -8,6 +8,8 @@ import subprocess
 from dxfwrite import DXFEngine as dxf
 from shape_generators import *
 
+from thesis_bud import app
+
 # Globals to activate debug code
 SHOW_STEPS = False
 SHOW_WINS = False
@@ -458,7 +460,7 @@ def parse_dat(path):
     return (fq, pf, mm)
 
 
-def find_eigenmodes(curves, elastic, density, showshape=False, name='test', savedata=False):
+def find_eigenmodes(curves, elastic, density, showshape=False, name='test', savedata=False, num_freqs_to_sim=36):
     '''
     Use the cgx/ccx FEM solver to find the eigenmodes of a plate
     Units of curve and thickness are in mm
@@ -476,15 +478,13 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
     '''
     # we want to test if ccx/cgx will work before beginning, so call them now to test
     smart_syscall('cgx')
-    
+
     totalSuccess = False
     home = os.getcwd()
     while not totalSuccess:
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        # num_freqs_to_sim = 106
-        num_freqs_to_sim = 36
         make_inp(elastic, density, freqs=num_freqs_to_sim)
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
