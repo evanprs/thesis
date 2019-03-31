@@ -2,6 +2,8 @@ import numpy as np
 import xy_interpolation as xy
 from random import random
 
+from thesis_bud import app
+
 def ptl_find_thinner_half(pts):
 	"""
 	Determines if a petal's source is pointed down or up
@@ -212,6 +214,7 @@ def gen_petal(
 	if length_upper is -1:
 		length_upper = 1 - length_lower
 
+	scale_w_min = 100
 	scale_w = (width_scale*length)/2
 	scale_l = length
 
@@ -254,8 +257,11 @@ def gen_petal(
 				scale_bound_b = np.random.beta(2, 2)
 
 				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-				while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < (diameter_transducer/2)) ):
+				while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+					app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
+					
+				app.logger.critical(f"------------ got past right upper ------------")
 
 				r_upper = np.append(r_upper, r_curr)
 			# r_upper.sort()
@@ -307,8 +313,11 @@ def gen_petal(
 					scale_bound_b = np.random.beta(2, 2)
 
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-					while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < (diameter_transducer/2)) ):
+					while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
 						r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
+						app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
+				
+					app.logger.critical(f"------------ got past left upper ------------")
 
 					r_upper = np.append(r_upper, r_curr)
 				# r_upper.sort()

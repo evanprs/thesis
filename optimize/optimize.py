@@ -106,6 +106,7 @@ class Bell():
             fit = xy.fitness(fq_nr[:n_freq], self.target)
             xy.print_fitness_vals(fq_nr, self.target, fit)
             print(fit)
+            app.logger.critical(fit)
             print("@shape: ", end="")
             print(pts)
             print("\n\n")
@@ -170,7 +171,7 @@ class Bell():
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=50)  # Max Iter @ 10 to provide "quick" feedback
+                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=10)  # Max Iter @ 10 to provide "quick" feedback
        
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):
