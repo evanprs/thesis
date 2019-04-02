@@ -259,9 +259,9 @@ def gen_petal(
 				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
 				while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-					app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
+					# app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
 					
-				app.logger.critical(f"------------ got past right upper ------------")
+				# app.logger.critical(f"------------ got past right upper ------------")
 
 				r_upper = np.append(r_upper, r_curr)
 			# r_upper.sort()
@@ -315,9 +315,9 @@ def gen_petal(
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
 					while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
 						r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-						app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
+						# app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
 				
-					app.logger.critical(f"------------ got past left upper ------------")
+					# app.logger.critical(f"------------ got past left upper ------------")
 
 					r_upper = np.append(r_upper, r_curr)
 				# r_upper.sort()

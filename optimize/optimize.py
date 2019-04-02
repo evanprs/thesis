@@ -102,13 +102,18 @@ class Bell():
                 #         s = xy.make_shape(s_pts, max_output_len=50)
                 #     else:
                 #         s = xy.make_shape(s_pts, max_output_len=100)
-            fq_nr = xy.find_frequencies(fq, self.target)
-            fit = xy.fitness(fq_nr[:n_freq], self.target)
-            xy.print_fitness_vals(fq_nr, self.target, fit)
-            print(fit)
+            # fq_nr = xy.find_frequencies(fq, self.target)
+            # fit = xy.fitness(fq_nr[:n_freq], self.target)
+            fit, fq_nr = xy.fitness_from_sampled_freqs(fq, self.target)
+            # app.logger.critical(fq_nr)
+            if sum(fq_nr) != -5:
+                xy.print_fitness_vals(fq_nr.tolist(), self.target, fit)
+            # print(fit)
             app.logger.critical(fit)
-            print("@shape: ", end="")
-            print(pts)
+            # print("@shape: ", end="")
+            app.logger.critical("@shape: ")
+            # print(pts)
+            app.logger.critical(pts)
             print("\n\n")
             self.fits.append(fit)
             self.fqs.append(fq)
@@ -171,7 +176,8 @@ class Bell():
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=10)  # Max Iter @ 10 to provide "quick" feedback
+                disp=True, xtol=xtol, ftol=ftol, maxiter=25, retall=True)  # Max Iter @ 10 to provide "quick" feedback
+                # disp=True, xtol=xtol, ftol=ftol, maxiter=1, maxfun=1, retall=True)  # Max Iter @ 10 to provide "quick" feedback
        
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):

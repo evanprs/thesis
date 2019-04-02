@@ -9,6 +9,7 @@ from dxfwrite import DXFEngine as dxf
 from shape_generators import *
 
 from thesis_bud import app
+from notes import Note
 
 # Globals to activate debug code
 SHOW_STEPS = False
@@ -501,7 +502,9 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
                 ng_tries += 1
             except FileNotFoundError:
                 ng_tries += 1
-                print(f"didn't find {name}.frd in {folder_path} during sim")
+                # print(f"didn't find {name}.frd in {folder_path} during sim")
+                app.logger.warning(f"didn't find {name}.frd in {folder_path} during sim")
+
 
         try: # TODO - tweak the intersection criteria so that this happens less
             data = parse_dat(name + '.dat')
@@ -515,7 +518,8 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         try:
             os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         except FileNotFoundError:
-            print(f"didn't find {name}.frd in {folder_path} after sim")
+            # print(f"didn't find {name}.frd in {folder_path} after sim")
+            app.logger.warning(f"didn't find {name}.frd in {folder_path} after sim")
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -541,6 +545,66 @@ def fitness(fq_ideal, fq_actual):
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
+
+
+def sub_search(fr_set, tr):
+
+    # note_tol = 12 # allowance of one octave
+    note_tol = 6 # allowance of half an octave
+
+    f_pot = []
+    ini_id = -1
+
+    for i in range(len(fr_set)):
+        m = Note(fr_set[i],1).midi
+
+        if (-1*note_tol <= (m - tr) <= 0):
+            f_pot.append(m)
+        elif (0 < (m - tr) <= note_tol):
+            if ini_id == -1:
+                ini_id = i
+            f_pot.append(m)
+        elif ((m - tr) > note_tol):
+            break
+
+    # print("potential f: ")
+    # print(f_pot)
+    return (ini_id, f_pot)
+
+def fitness_from_sampled_freqs(fr, tr):
+
+    ky_in_d = {}
+    ch_v = np.ones((len(tr),1)) * (1.0 * 10)
+    tr_as_m = []
+    m_out = np.ones((len(tr),1)) * (1.0 * 10)
+    s_ini = 0
+    for t in tr:
+        tr_as_m.append(Note(t,1).midi)
+
+    for t in range(len(tr_as_m)):
+        k = tr_as_m[t]
+        s_mod, k_collect = sub_search(fr[s_ini:], k)
+        s_ini += s_mod
+        ky_in_d[k] = np.array(k_collect)
+        temp = ky_in_d[k] - k
+        if len(temp) > 0:
+            ch_v[t] = (np.min(np.abs(temp)))
+            if ch_v[t] in temp:
+                m_out[t] = ch_v[t] + k
+            else:
+                m_out[t] = -1*ch_v[t] + k
+        else:
+            m_out[t] = -1
+
+    assert len(ch_v) == len(tr)
+
+    ch_v = np.transpose(ch_v)
+    x = np.mean( (ch_v**2)/tr_as_m )
+    x *= 100
+
+    # return x, ch_v
+
+    return x, m_out
 
 
 def find_frequencies(fq_curr, fq_trgt):
@@ -599,9 +663,19 @@ def find_frequencies(fq_curr, fq_trgt):
         return fq_out
 
 def print_fitness_vals(fq_curr, fq_trgt, fitness):
+    
     for f in range(len(fq_trgt)):
-        print(f"| {round(fq_trgt[f], 3)} - {round(fq_curr[f], 3)} | = {round(abs(fq_trgt[f] - fq_curr[f]), 3)}")
-    print(f"Fitness: {fitness}\n")
+        curr_trgt = Note(fq_trgt[f],1)
+        curr_freq = Note(fq_curr[f][0],2)
+        app.logger.debug(f"Midis | {round(curr_trgt.midi, 3)} - {round(curr_freq.midi, 3)} | = {round(abs(curr_trgt.midi - curr_freq.midi), 3)}")
+    
+    app.logger.debug(f"\n\nFitness: {fitness}\n")
+    
+    for f in range(len(fq_trgt)):
+        curr_trgt = Note(fq_trgt[f],1)
+        curr_freq = Note(fq_curr[f][0],2)
+        app.logger.debug(f"Freqs | {round(curr_trgt.freq, 3)} - {round(curr_freq.freq, 3)} | = {round(abs(curr_trgt.freq - curr_freq.freq), 3)}")
+    
     return
 
 

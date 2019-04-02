@@ -125,11 +125,28 @@ materials = {
 
 @app.route('/')
 def index():
+	""" Index route.
+	---
+	get:
+			summary: Index endpoint.
+			description: Ping the server, get a boop!
+			responses:
+					200:
+							description: JSON boop to be returned.
+	"""
 	return jsonify("boop!")
 
 @app.route('/ping')
 def ping_pong():
-
+	""" "ping pong" route for testing CORS.
+	---
+	get:
+			summary: Ping Pong endpoint.
+			description: Ping the server, get pong back!
+			responses:
+					200:
+							description: JSON pong to be returned.
+	"""
 	return jsonify("pong!")
 
 @app.route('/api/gen_ptl_neue', methods=['POST'])
@@ -198,10 +215,10 @@ def gen_ptl_pts():
 
 			# return Response(generate(), mimetype='text/csv')
 			# return Response(xy.pts_to_dxf(pts),
-			#                     mimetype="application/dxf",
-			#                     headers={
-			#                         "Content-Disposition":"attachment;filename=test.dxf"
-			#                     })
+			# mimetype="application/dxf",
+			# headers={
+			# 		"Content-Disposition":"attachment;filename=test.dxf"
+			# })
 		else:
 			pass
 
@@ -219,6 +236,24 @@ def get_cll_to_tst():
 
 @app.route('/api/get_shp_to_dxf', methods=['POST'])
 def get_shp_to_dxf():
+	""" Cool Foo-Bar route.
+	---
+	get:
+			summary: Foo-Bar endpoint.
+			description: Get a single foo with the bar ID.
+			parameters:
+					- name: bar_id
+						in: path
+						description: Bar ID
+						type: integer
+						required: true
+			responses:
+					200:
+							description: Foo object to be returned.
+							schema: FooSchema
+					404:
+							description: Foo not found.
+	"""
 
 	# Get our input
 	inp = request.get_json()
@@ -314,6 +349,10 @@ def get_cll_to_ths():
 		try:
 			b.findOptimumCurve()
 			count_att += 1
+			app.logger.critical("****************")
+			app.logger.critical("fitness: ")
+			app.logger.critical(str(b.best_fit))
+			app.logger.critical("*****************")
 		except AssertionError:
 			count_att += 1
 			count_att -= 1
@@ -321,13 +360,9 @@ def get_cll_to_ths():
 			count_att += 1
 			count_att -= 1
 			
-		if (b.best_fit < min_fit_acc):
+		if (float(b.best_fit) < float(min_fit_acc)):
 			break
 		else:
-			app.logger.critical("*****************")
-			app.logger.critical("fitness:")
-			app.logger.critical(str(b.best_fit))
-			app.logger.critical("*****************")
 			# prm['c0'] = b.optpts[0].tolist(), b.optpts[1].tolist()
 			prm['c0'] = b.optpts
 			bells.append(b)
