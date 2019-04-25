@@ -25,7 +25,7 @@ RUN echo "locales locales/locales_to_be_generated multiselect en_US.UTF-8 UTF-8"
 	&& apt-get update \
 	&& apt-get --yes --no-install-recommends install \
 		locales tzdata ca-certificates sudo \
-		bash-completion curl tree \
+		bash-completion curl vim \
 	&& rm -rf /var/lib/apt/lists/*
 ENV LANG en_US.UTF-8
 
@@ -66,6 +66,7 @@ RUN  cd "${ngp}/bin" \
 RUN apt-add-repository universe \
 	&& apt-get update --yes \
 	&& apt-get install --yes calculix-cgx calculix-ccx \
+	&& apt-get install --yes lilypond \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Attach our code copied

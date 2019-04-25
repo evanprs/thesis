@@ -2,7 +2,7 @@ version: "3"
 services:
   broker:
     build: .
-    command: python3 app.py
+    command: python3 thesis_bud.py
     environment:
       - DEBUG=True
     ports:

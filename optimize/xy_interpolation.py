@@ -492,7 +492,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         curves_to_fbd(curves, name + '.fbd')
 
         ng_tries = 0
-        while ng_tries < 1:
+        while ng_tries < 3:
             try:
                 os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
                 if showshape:
@@ -503,7 +503,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
             except FileNotFoundError:
                 ng_tries += 1
                 # print(f"didn't find {name}.frd in {folder_path} during sim")
-                app.logger.warning(f"didn't find {name}.frd in {folder_path} during sim")
+                app.logger.error(f"didn't find {name}.frd in {folder_path} during sim")
 
 
         try: # TODO - tweak the intersection criteria so that this happens less
@@ -519,7 +519,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
             os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         except FileNotFoundError:
             # print(f"didn't find {name}.frd in {folder_path} after sim")
-            app.logger.warning(f"didn't find {name}.frd in {folder_path} after sim")
+            app.logger.error(f"didn't find {name}.frd in {folder_path} after sim")
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -549,8 +549,8 @@ def fitness(fq_ideal, fq_actual):
 
 def sub_search(fr_set, tr):
 
-    # note_tol = 12 # allowance of one octave
-    note_tol = 6 # allowance of half an octave
+    note_tol = 12 # allowance of one octave
+    # note_tol = 6 # allowance of half an octave
 
     f_pot = []
     ini_id = -1
@@ -667,14 +667,14 @@ def print_fitness_vals(fq_curr, fq_trgt, fitness):
     for f in range(len(fq_trgt)):
         curr_trgt = Note(fq_trgt[f],1)
         curr_freq = Note(fq_curr[f][0],2)
-        app.logger.debug(f"Midis | {round(curr_trgt.midi, 3)} - {round(curr_freq.midi, 3)} | = {round(abs(curr_trgt.midi - curr_freq.midi), 3)}")
+        app.logger.critical(f"Midis | {round(curr_trgt.midi, 3)} - {round(curr_freq.midi, 3)} | = {round(abs(curr_trgt.midi - curr_freq.midi), 3)}")
     
-    app.logger.debug(f"\n\nFitness: {fitness}\n")
+    app.logger.critical(f"\n\nFitness: {fitness}\n")
     
     for f in range(len(fq_trgt)):
         curr_trgt = Note(fq_trgt[f],1)
         curr_freq = Note(fq_curr[f][0],2)
-        app.logger.debug(f"Freqs | {round(curr_trgt.freq, 3)} - {round(curr_freq.freq, 3)} | = {round(abs(curr_trgt.freq - curr_freq.freq), 3)}")
+        app.logger.critical(f"Freqs | {round(curr_trgt.freq, 3)} - {round(curr_freq.freq, 3)} | = {round(abs(curr_trgt.freq - curr_freq.freq), 3)}")
     
     return
 

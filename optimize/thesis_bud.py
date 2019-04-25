@@ -190,6 +190,12 @@ def gen_ptl_pts():
 	if ('max_out_len' in inp):
 		prm['max_out_len'] = int(inp['max_out_len'])
 
+	if ('base_append' in inp):
+		if str(inp['base_append']) in ["true", "True", "TRUE"]:
+			prm['base_append'] = True
+		else:
+			prm['base_append'] = False
+
 	if inp['variant'] not in ["curve", "point", "standard", "custom"]:
 		raise TypeError("ERROR: Selected variant not supported")
 	else:
@@ -293,7 +299,7 @@ def get_cll_to_sim():
 		'scale': float(inp['scale']),
 		'grade': str(inp['grade']),
 		'ctrlpoints': int(inp['ctrlpoints']),
-		'c0': [ inp['c0'][0], inp['c0'][1] ]
+		'c0': [ inp['c0']['x'], inp['c0']['y'] ]
 	}
 
 	b = Bell(**prm)
@@ -338,79 +344,92 @@ def get_cll_to_ths():
 		# return str(pts)
 	
 	if inp['c0']:
-		prm['c0'] = inp['c0'][0], inp['c0'][1]
+		if inp['c0']['x']:
+			prm['c0'] = inp['c0']['x'], inp['c0']['y']
+		elif inp['c0']['final_x']:
+			prm['c0'] = inp['c0']['final_x'], inp['c0']['final_y']
+
 		# return str(prm['c0'])
 
-	bells = []
+	# bells = []
 	count_att = 0
-	min_fit_acc = 0.05
+	min_fit_acc = 0.5
 	b = Bell(**prm)
-	while (count_att < 5):
-		try:
-			b.findOptimumCurve()
-			count_att += 1
-			app.logger.critical("****************")
-			app.logger.critical("fitness: ")
-			app.logger.critical(str(b.best_fit))
-			app.logger.critical("*****************")
-		except AssertionError:
-			count_att += 1
-			count_att -= 1
-		except TypeError:
-			count_att += 1
-			count_att -= 1
-			
-		if (float(b.best_fit) < float(min_fit_acc)):
-			break
-		else:
-			# prm['c0'] = b.optpts[0].tolist(), b.optpts[1].tolist()
-			prm['c0'] = b.optpts
-			bells.append(b)
-			b = Bell(**prm)
 	
+	try:
+		b.findOptimumCurve()
+		count_att += 1
+		app.logger.critical("****************")
+		app.logger.critical("fitness: ")
+		app.logger.critical(str(b.best_fit))
+		app.logger.critical("*****************")
+	except AssertionError:
+		count_att += 1
+		count_att -= 1
+	except TypeError:
+		count_att += 1
+		count_att -= 1
+	
+	if not (float(b.best_fit) < float(min_fit_acc)):
+		while (count_att < 1):
+			try:
+				b.refine()
+				count_att += 1
+				app.logger.critical("****************")
+				app.logger.critical("fitness: ")
+				app.logger.critical(str(b.best_fit))
+				app.logger.critical("*****************")
+			except AssertionError:
+				count_att += 1
+				count_att -= 1
+			except TypeError:
+				count_att += 1
+				count_att -= 1
+				
+			if (float(b.best_fit) < float(min_fit_acc)):
+				break
 
-	"""
-	res_fits = []
-	for bb in bells:
-		if (b.best_fit is not None) and (type(b.best_fit) == float):
-			res_fits.append(b.best_fit)
-	
-	b = bells[res_fits.index(min(res_fits))]
-	"""
-
-	
-	# res['version'] = b.version
-	# res['target'] = b.target
-	res['thickness'] = b.thickness
-	# res['elastic'] = b.elastic
-	# res['density'] = b.density
+	res['version'] = b.version
+	res['target'] = b.target
+	res['thickness'] = float(b.thickness)
+	# res['elastic'] = float(b.elastic)
+	res['density'] = float(b.density)
 	# res['scale'] = b.scale
-	# res['grade'] = b.grade
-	# res['initial_x'] = b.c0[0].tolist()
-	# res['initial_y'] = b.c0[1].tolist()
+	res['grade'] = str(b.grade)
 
+	app.logger.critical("    now initial_x:")
+	# res['initial_x'] = [x for x in b.c0[0]]
 	if type(b.c0[0]) == np.ndarray:
 		res['initial_x'] = b.c0[0].tolist()
 	else:
 		res['initial_x'] = b.c0[0]
 	
+	app.logger.critical("    now initial_y:")
+	# res['initial_y'] = [y for y in b.c0[1]]
 	if type(b.c0[1]) == np.ndarray:
 		res['initial_y'] = b.c0[1].tolist()
 	else:
 		res['initial_y'] = b.c0[1]
 	
+	app.logger.critical("    now final_x:")
+	# res['x'] = [x for x in b.optpts[0]]
 	if type(b.c0[0]) == np.ndarray:
 		res['final_x'] = b.optpts[0].tolist()
 	else:
 		res['final_x'] = b.optpts[0]
 	
+	app.logger.critical("    now final_y:")
+	# res['y'] = [y for y in b.optpts[1]]
 	if type(b.c0[1]) == np.ndarray:
 		res['final_y'] = b.optpts[1].tolist()
 	else:
 		res['final_y'] = b.optpts[1]
 		
+	app.logger.critical("    now fit:")
 	res['fit'] = float(b.best_fit)
 
+	app.logger.critical("    now frequencies:")
+	# res['frequencies'] = [f for f in b.best_fq]
 	if type(b.best_fq) == np.ndarray:
 		res['frequencies'] = b.best_fq.tolist()
 	else:

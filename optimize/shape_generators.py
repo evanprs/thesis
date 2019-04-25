@@ -130,7 +130,7 @@ def make_random_petal(max_wth=25, max_len=100, base_d=240, extn_d=120, max_out_l
 
 	while not valid_shape:
 		try:
-		  # Points A and B
+			# Points A and B
 			if pointy:
 				xs_l = np.append(np.random.uniform(0.1, 0.5), 1)
 			else:
@@ -184,12 +184,12 @@ def pick_val(base_l, base_u, vary):
 
 
 def gen_petal(
- num_points=4, num_points_upper=2, num_points_lower=2,
- width_scale=0.25, length=1000, length_upper=-1, length_lower=-1,
- diameter_transducer=240, radius_extension=120,
- variant="curve", deviation_factor=0, symmetric=True,
- max_out_len=100
- ):
+	num_points=4, num_points_upper=2, num_points_lower=2,
+	width_scale=0.25, length=1000, length_upper=-1, length_lower=-1,
+	base_append=1, diameter_transducer=240, radius_extension=120,
+	variant="curve", deviation_factor=0, symmetric=True,
+	max_out_len=100
+	):
 
 	if not isinstance(num_points, int):
 		raise TypeError("ERROR: Number of points must be integer")
@@ -220,6 +220,8 @@ def gen_petal(
 
 	valid_shape = False
 	counter_fail = 0
+
+	# app.logger.critical("got past the setup")
 
 	while not valid_shape:
 		try:
@@ -257,11 +259,12 @@ def gen_petal(
 				scale_bound_b = np.random.beta(2, 2)
 
 				r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-				while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
+				app.logger.critical(f"r_curr = {r_curr} ~> x-comp = {r_curr*np.cos(t_upper[ii+1])} w/i b({(((diameter_transducer)/2))}, {scale_w})")
+				while not ( scale_w > (r_curr*np.cos(t_upper[ii+1])) > ((diameter_transducer)/2) ):
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-					# app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
-					
-				# app.logger.critical(f"------------ got past right upper ------------")
+					app.logger.critical(f"r_curr = {r_curr} ~> x-comp = {r_curr*np.cos(t_upper[ii+1])} w/i b({(((diameter_transducer)/2))}, {scale_w})")
+				
+				app.logger.critical(f"------------ got past right upper ------------")
 
 				r_upper = np.append(r_upper, r_curr)
 			# r_upper.sort()
@@ -275,8 +278,13 @@ def gen_petal(
 			ys_r = rs*np.sin(ts)
 
 			# Generate base of petal
-			b_pts = gen_nodal_base(diameter_transducer, radius_extension)
-			b_pts = translate_shape_up(b_pts, p_upper*scale_l)
+			if base_append:
+				app.logger.critical("add add the base")
+				b_pts = gen_nodal_base(diameter_transducer, radius_extension)
+				b_pts = translate_shape_up(b_pts, p_upper*scale_l)
+			else:
+				app.logger.critical("no.")
+				b_pts = []
 
 			if symmetric:
 				# Generate left side of petal
@@ -313,11 +321,12 @@ def gen_petal(
 					scale_bound_b = np.random.beta(2, 2)
 
 					r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-					while ( (r_curr*np.cos(t_upper[ii+1]) > scale_w) or (r_curr*np.cos(t_upper[ii+1]) < ((diameter_transducer)/2)) ):
+					app.logger.critical(f"r_curr = {r_curr} ~> x-comp = {r_curr*np.cos(t_upper[ii+1])} w/i b({(((diameter_transducer)/2))}, {scale_w})")
+					while not ( scale_w > (r_curr*np.cos(t_upper[ii+1])) > ((diameter_transducer)/2) ):
 						r_curr = pick_val(scale_bound_l, scale_bound_l + (scale_bound_b*scale_bound_d), deviation_factor)
-						# app.logger.critical(f"r_curr = {r_curr} w/i b({scale_w}, {(((diameter_transducer)/2))})")
+						app.logger.critical(f"r_curr = {r_curr} ~> x-comp = {r_curr*np.cos(t_upper[ii+1])} w/i b({(((diameter_transducer)/2))}, {scale_w})")
 				
-					# app.logger.critical(f"------------ got past left upper ------------")
+					app.logger.critical(f"------------ got past left upper ------------")
 
 					r_upper = np.append(r_upper, r_curr)
 				# r_upper.sort()
@@ -334,9 +343,22 @@ def gen_petal(
 				ys_l = np.flip(ys_l[1:])
 
 			# Connect parts
-			xs = np.append(xs_r, b_pts[0])
+			# app.logger.critical("upper and lower:")
+			# app.logger.critical(f"{p_upper} + {p_lower} = {p_upper + p_lower} =?= {(p_upper + p_lower) == 1}")
+			# app.logger.critical(f"{p_upper*scale_l} + {p_lower*scale_l} = {(p_upper + p_lower)*scale_l}")
+			# if base_append:
+			# 	app.logger.critical("yas")
+			# else:
+			# 	app.logger.critical("naw")
+			if base_append:
+				xs = np.append(xs_r, b_pts[0])
+			else:
+				xs = np.append(xs_r, 0)
 			xs = np.append(xs, xs_l)
-			ys = np.append(ys_r, b_pts[1])
+			if base_append:
+				ys = np.append(ys_r, b_pts[1])
+			else:
+				ys = np.append(ys_r, p_upper*scale_l)
 			ys = np.append(ys, ys_l)
 
 			# Touchups
@@ -348,4 +370,15 @@ def gen_petal(
 			counter_fail += 1
 
 
+def gen_amoeba(
+	num_points=4, num_points_upper=2, num_points_lower=2,
+	width_scale=0.25, length=1000, length_upper=-1, length_lower=-1,
+	base_append=1, diameter_transducer=240, radius_extension=120,
+	variant="curve", deviation_factor=0, symmetric=True,
+	max_out_len=100
+	):
+
+	print("haha")
+
+	return "meow"
 

@@ -5,7 +5,7 @@ import numpy as np
 
 # from note_helpers import *
 # from from_fusion import *
-# from to_lily import *
+from to_lily import *
 
 DEBUG_BOOL = False
 

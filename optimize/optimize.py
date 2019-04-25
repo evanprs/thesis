@@ -80,34 +80,35 @@ class Bell():
             # If ng_vol had a memory error, fq will be empty
             while True:
                 fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, num_freqs_to_sim=num_freqs_to_sim)
-                break
-                # t_c = 0
-                # if ( len(fq) > 0 ):
-                #     if (t_c > 1):
-                #         print(f"attempts at a shape: {t_c}")
-                #     break
-                # else:
-                #     # Attempt to force a self-intersection
-                #     # NOTE: This might be best in another try/catch block
-                #     print("Curve did not create a valid mesh")
-                #     t_c += 1
+                # break
+                t_c = 0
+                if ( len(fq) > 0 ):
+                    if (t_c > 1):
+                        print(f"attempts at a shape: {t_c}")
+                    break
+                else:
+                    # Attempt to force a self-intersection
+                    # NOTE: This might be best in another try/catch block
+                    print("Curve did not create a valid mesh")
+                    t_c += 1
 
-                #     s0 = s[0]
-                #     s1 = s[1]
-                #     s0 = np.random.shuffle(s0)
-                #     s1 = np.random.shuffle(s1)
-                #     s_pts = (s0, s1)
+                    s0 = s[0]
+                    s1 = s[1]
+                    s0 = np.random.shuffle(s0)
+                    s1 = np.random.shuffle(s1)
+                    s_pts = (s0, s1)
                     
-                #     if self.grade == 'coarse':
-                #         s = xy.make_shape(s_pts, max_output_len=50)
-                #     else:
-                #         s = xy.make_shape(s_pts, max_output_len=100)
+                    if self.grade == 'coarse':
+                        s = xy.make_shape(s_pts, max_output_len=50)
+                    else:
+                        s = xy.make_shape(s_pts, max_output_len=100)
             # fq_nr = xy.find_frequencies(fq, self.target)
             # fit = xy.fitness(fq_nr[:n_freq], self.target)
             fit, fq_nr = xy.fitness_from_sampled_freqs(fq, self.target)
             # app.logger.critical(fq_nr)
-            if sum(fq_nr) != -5:
-                xy.print_fitness_vals(fq_nr.tolist(), self.target, fit)
+            app.logger.critical(fq)
+            # if sum(fq_nr) != -5:
+            xy.print_fitness_vals(fq_nr.tolist(), self.target, fit)
             # print(fit)
             app.logger.critical(fit)
             # print("@shape: ", end="")
@@ -151,8 +152,8 @@ class Bell():
         fit, freqs = self.evalFitness(flatpts, single_sim=True, num_freqs_to_sim=num_freqs_to_sim)
 
         res = {
-            'fit': fit,
-            'frequencies': freqs
+            'fit': float(fit),
+            'frequencies': [f for f in freqs]
         }
 
         return res
@@ -176,9 +177,9 @@ class Bell():
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                disp=True, xtol=xtol, ftol=ftol, maxiter=25, retall=True)  # Max Iter @ 10 to provide "quick" feedback
+                disp=True, xtol=xtol, ftol=ftol, maxiter=5, retall=True)  # Max Iter @ 10 to provide "quick" feedback
                 # disp=True, xtol=xtol, ftol=ftol, maxiter=1, maxfun=1, retall=True)  # Max Iter @ 10 to provide "quick" feedback
-       
+        
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):
                 c = (x_new[:len(x_new) // 2], x_new[len(x_new) // 2:])
@@ -227,7 +228,7 @@ class Bell():
             retdict = self.findOptimumCurve()
             self.c0 = c0_initial
             return retdict
-               
+        
         
     def show(self):
         """ If the optimization has been run, shows the result in CalculiX."""
