@@ -1,0 +1,16 @@
+FROM python:3
+
+ENV API /api
+
+RUN mkdir $API
+WORKDIR $API
+
+EXPOSE 5000
+
+COPY requirements_for_scale.txt .
+
+RUN pip install -r requirements_for_scale.txt
+
+COPY . .
+
+CMD ["uwsgi", "--ini", "api.ini"]
