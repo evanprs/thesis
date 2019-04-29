@@ -1,5 +1,5 @@
 # Python imports
-import os, sys, time, uuid, json
+import os, sys, time, uuid, json, subprocess
 # Flask imports
 from flask import Flask, jsonify, request, Response, send_file
 # CORS imports (enables api-like interaction)
@@ -299,32 +299,35 @@ def one_sculpture(sculpture_id):
 	}
 
 	# Determine if PUT or DELETE
-	if request.method == 'PUT':
+	if request.method == 'GET':
+		# GET
+		current_sculpture = retrieve_sculpture(sculpture_id)
+
+		res['sculpture'] = current_sculpture
+	elif request.method == 'PUT':
 		# UPDATE
-		current_sculpture = request.get_json()
+		current_sculpture = retrieve_sculpture(sculpture_id)
+		updated_sculpture = request.get_json()
 
 		# Remove old copy
 		remove_sculpture(sculpture_id)
 		# Append new copy
 		SCULPTURES.append({
 			'id': sculpture_id,
-			'name': current_sculpture.get('name'),
-			'target_frequencies': current_sculpture.get('target_frequencies'),
-			'material_params': current_sculpture.get('material_params'),
-			'simulation_params': current_sculpture.get('simulation_params'),
-			'geometry_params': current_sculpture.get('geometry_params'),
-			'results_store': current_sculpture.get('results_store')
+			'name': (updated_sculpture.get('name') or current_sculpture.get('name')),
+			'target_frequencies': (updated_sculpture.get('target_frequencies') or current_sculpture.get('target_frequencies')),
+			'material_params': (updated_sculpture.get('material_params') or current_sculpture.get('material_params')),
+			'simulation_params': (updated_sculpture.get('simulation_params') or current_sculpture.get('simulation_params')),
+			'geometry_params': (updated_sculpture.get('geometry_params') or current_sculpture.get('geometry_params')),
+			'results_store': (updated_sculpture.get('results_store') or current_sculpture.get('results_store')),
 		})
 
 		res['message'] = 'Sculpture updated!'
 	elif request.method == 'DELETE':
 		# DELETE
 		remove_sculpture(sculpture_id)
+
 		res['message'] = 'Sculpture removed!'
-	else:
-		# Get Current Params
-		current_sculpture = retrieve_sculpture(sculpture_id)
-		res['sculpture'] = current_sculpture
 
 	return jsonify(res)
 
@@ -357,7 +360,7 @@ def sculpture_generate_petal(sculpture_id):
 			'material_params': current_sculpture.get('material_params'),
 			'simulation_params': current_sculpture.get('simulation_params'),
 			'geometry_params': current_sculpture.get('geometry_params'),
-			'results_store': current_sculpture.get('results_store')
+			'results_store': {}
 		}
 		new_sculpture['simulation_params']['c0'] = output_points
 		SCULPTURES.append(new_sculpture)
@@ -580,7 +583,7 @@ def sculpture_get_pdf(sculpture_id):
 		current_sculpture = retrieve_sculpture(sculpture_id)
 		results = current_sculpture['results_store']
 
-		if (len(results) > 0) and ('frequencies' in results.keys()):
+		if ('frequencies' in results.keys()):
 
 			# Declare Tolerance
 			tolerance_factor = 8
@@ -598,19 +601,36 @@ def sculpture_get_pdf(sculpture_id):
 			value_harmonics = get_all_value_harmonics(notes, tolerance)
 			reltv_harmonics = get_all_value_harmonics(notes, tolerance, 1)
 
-			file = open('output.ly', 'w')
+			app.logger.debug('Writing lilypond file...')
+			app.logger.critical('---')
+			subprocess.call(['ls', '-l'])
+			app.logger.critical('---')
+			subprocess.call(['rm', 'output.ly'])
+			app.logger.critical('---')
+			subprocess.call(['ls', '-l'])
+			app.logger.critical('---')
+			subprocess.call(['rm', 'output.pdf'])
+			app.logger.critical('---')
+			subprocess.call(['ls', '-l'])
+			app.logger.critical('---')
+			file = open('output.ly', 'w+')
 			file.write(generate_lily_content("Results", notes, scale_harmonics, value_harmonics, reltv_harmonics))
+			file.close()
+			app.logger.debug('...wrote lilypond file')
 
-			import subprocess
-			subprocess.run(['lilypond', '--silent', 'output.ly'])
+			app.logger.debug('Writing to PDF...')
+			subprocess.call(['lilypond', 'output.ly'])
+			app.logger.debug('...wrote PDF')
 
-			return send_file('output.ly', as_attachment=True)
+			return send_file('output.pdf', as_attachment=True)
 		
 		else:
-			return jsonify({
-				'status': 'failure',
-				'message': 'Frequencies missing, run either check_current_frequencies or optimize_shape first!'
-			})
+			sculpture_check_current_frequencies(sculpture_id)
+			sculpture_get_pdf(sculpture_id)
+			# return jsonify({
+			# 	'status': 'failure',
+			# 	'message': 'Frequencies missing, run either check_current_frequencies or optimize_shape first!'
+			# })
 
 	return jsonify(False)
 

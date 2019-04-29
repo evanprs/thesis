@@ -1,21 +1,34 @@
+### SCULPTURE { INDEX }
 GET http://192.168.99.100:5000/sculptures
 
-###
+### SCULPTURE { CREATE }
 
-POST http://localhost:5000/sculptures
+POST http://192.168.99.100:5000/sculptures
 Content-Type: application/json
 
 {
 	"name": "Flower 2"
 }
 
-###
+### SCULPTURE { READ }
+GET http://192.168.99.100:5000/sculptures/ad5f1fda3c9c43c291127421625d5db1
 
-DELETE http://localhost:5000/sculptures/fba5f12efba147c8b691495bec8095bf
+### SCULPTURE { UPDATE }
 
-###
-GET http://localhost:5000/sculptures/a43ad21ec0054255ba537847b57bb6cf/generate_petal
+PUT http://192.168.99.100:5000/sculptures/ad5f1fda3c9c43c291127421625d5db1
+Content-Type: application/json
+
+{
+	"name": "Flower Omega"
+}
+
+### SCULPTURE { DELETE }
+DELETE http://192.168.99.100:5000/sculptures/a43ad21ec0054255ba537847b57bb6cf
 
 
-###
-GET http://localhost:5000/sculptures/72b24c609f224d9aa57fd6490140a5fd/check_current_frequencies
+### SCULPTURE { generate_petal() }
+GET http://192.168.99.100:5000/sculptures/a43ad21ec0054255ba537847b57bb6cf/generate_petal
+
+
+### 
+GET http://192.168.99.100:5000/sculptures/ad5f1fda3c9c43c291127421625d5db1/check_current_frequencies
