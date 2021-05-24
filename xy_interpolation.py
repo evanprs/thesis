@@ -486,7 +486,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         with open(name + '.curve','w') as curvefile:
             curvefile.write(str(curves))
         curves_to_fbd(curves, name + '.fbd')
-        os.system('cgx -b -bg ' + name + '.fbd >> test.log 2> error.log')
+        os.system('cgx -bg ' + name + '.fbd >> test.log 2> error.log')
         if showshape:
             os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
         else:
@@ -533,10 +533,12 @@ def fitness(fq_ideal, fq_actual):
 
 
 if __name__ == "__main__":
-    moon = make_moon(100,.9)
-    moon2 = make_moon(100,.15)
+    # moon = make_moon(100,.9)
+    # moon2 = make_moon(100,.15)
     # fq, pf, mm = find_eigenmodes([(moon, 3)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
-    fq, pf, mm = find_eigenmodes([(moon, 3),(moon2, 2)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
+    # fq, pf, mm = find_eigenmodes([(moon, 3),(moon2, 2)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
+    shape, _ = make_random_shape(8)
+    fq, pf, mm = find_eigenmodes([(shape, 3)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
     plt.figure()
     plt.plot(fq)
     plt.show()
