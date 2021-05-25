@@ -1,4 +1,6 @@
 import datetime
+from multiprocessing import cpu_count
+from posix import environ
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -405,7 +407,7 @@ def make_inp(elastic='69000e6,0.33', density=0.002712, freqs=14, name='test'):
     *SOLID SECTION,ELSET=Eall,MATERIAL=Al
     *STEP, PERTURBATION 
     *FREQUENCY
-    {}
+    {}, 1.23123123
     *NODE PRINT,FREQUENCY=0
     *EL PRINT,FREQUENCY=0
     *NODE FILE
@@ -479,43 +481,54 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         mm (list): effective modal mass (x,y,z,x_rot,y_rot,z_rot)
     '''
     # we want to test if ccx/cgx will work before beginning, so call them now to test
-    smart_syscall('cgx')
-    
+    # smart_syscall('cgx')
+    n_cores = str(cpu_count())
+    env_vars = ["OMP_NUM THREADS"
+    "CCX_NPROC_STIFFNESS",
+    "CCX_NPROC_EQUATION_SOLVER",
+    "CCX_NPROC_RESULTS",
+    "CCX_NPROC_VIEWFACTOR",
+    "CCX_NPROC_CFD",
+    "CCX_NPROC_BIOTSAVART"]
+    for env_var in env_vars:
+        os.environ[env_var] = n_cores
+
     totalSuccess = False
     home = os.getcwd()
     while not totalSuccess:
         os.chdir('/tmp')
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
-        make_inp(elastic, density)
-        with open(name + '.curve','w') as curvefile:
-            curvefile.write(str(curves))
-        curves_to_fbd(curves, name + '.fbd')
-        os.system('cgx -bg ' + name + '.fbd >> test.log 2> error.log')
-        if showshape:
-            os.system('ccx ' + name + ' >> test.log  2> error.log; cgx ' + name + '.frd ' + name + '.inp >> test.log  2> error.log')
-        else:
-            os.system('ccx ' + name + ' >> test.log')
+        with open('error.log', 'a') as errorfile, open('test.log', "a") as logfile:
+            make_inp(elastic, density)
+            with open(name + '.curve','w') as curvefile:
+                curvefile.write(str(curves))
+            curves_to_fbd(curves, name + '.fbd')
+            subprocess.run(['cgx', '-bg', name + '.fbd'], stdout=logfile, stderr=errorfile) 
+            if showshape:
+                subprocess.run(['ccx', name],  stdout=logfile, stderr=errorfile) 
+                subprocess.run(['cgx', name + '.frd', name + '.inp'], stdout=logfile, stderr=errorfile)
+            else:
+                subprocess.run(['ccx', name], stdout=logfile, stderr=errorfile)
 
-        try: # TODO - tweak the intersection criteria so that this happens less
-            data = parse_dat(name + '.dat')
-            totalSuccess = True
-        except StopIteration:
-            os.chdir('..')
+            try: # TODO - tweak the intersection criteria so that this happens less
+                data = parse_dat(name + '.dat')
+                totalSuccess = True
+            except StopIteration:
+                os.chdir('..')
+                if not savedata:
+                    subprocess.run(['rm', '-r', folder_path]) #BE VERY CAREFUL
+                raise ValueError('Curve did not create a valid object')
+            try:
+                os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
+            except FileNotFoundError:
+                logging.warning(f"didn't find {name}.frd in {folder_path}. What shape just failed?")
+                breakpoint()
             if not savedata:
-                os.system('rm -r '+folder_path) #BE VERY CAREFUL
-            raise ValueError('Curve did not create a valid object')
-        try:
-            os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
-        except FileNotFoundError:
-            logging.warning(f"didn't find {name}.frd in {folder_path}. What shape just failed?")
-            breakpoint()
-        if not savedata:
-            os.chdir('/tmp')
-            os.system('rm -r '+folder_path) 
-        
+                os.chdir('/tmp')
+                subprocess.run(['rm', '-r', folder_path])
     os.chdir(home) 
-    fq, pf, mm = [d[6:] for d in data]  # ignore the trivial
+    fq, pf, mm =  data 
     return fq, pf, mm
 
 
@@ -536,9 +549,9 @@ if __name__ == "__main__":
     # moon2 = make_moon(100,.15)
     # fq, pf, mm = find_eigenmodes([(moon, 3)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
     # fq, pf, mm = find_eigenmodes([(moon, 3),(moon2, 2)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
-    shape, _ = make_random_shape(8)
+    shape, _ = make_random_shape(8, scale=100)
     fq, pf, mm = find_eigenmodes([(shape, 3)], elastic='69000e6,0.33', density=0.002712, showshape=True, savedata=True)
-    plt.figure()
-    plt.plot(fq)
-    plt.show()
+    # plt.figure()
+    # plt.plot(fq)
+    # plt.show()
 

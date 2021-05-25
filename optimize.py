@@ -194,7 +194,7 @@ if __name__ == '__main__':
     
     minimum_fitness = 0.1  # this is below audible precision
     target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220  # choose a fundamental (220 Hz) and a set of overtones
-    targets = [target_0 * 2**(n/12.0) for n in range(12)] # chromatic scale multiples
+    targets = [target_0 * 2**(n/12.0) for n in range(1)] # chromatic scale multiples
     attempts = 5  # number of shapes to try for each target
 
     trg_progress_bar = manager.counter(total=len(targets), unit="targets")
@@ -212,12 +212,13 @@ if __name__ == '__main__':
             pickle.dump(bells, open('data/bells.p','wb'))
             if bell.best_fit < minimum_fitness: # good enough for now.
                 break
+            attempts_progress_bar.update()
 
     trg_progress_bar.update()
     
     # find the the closest fit bells for each target
     finalists = []
-    bells_sorted = [[b for b in bells if b.target == trg] for trg in targets]
+    bells_sorted = [[b for b in bells if all(b.target == trg)] for trg in targets]
     for sorted_group in bells_sorted:
         if len(sorted_group) == 0:
             continue
