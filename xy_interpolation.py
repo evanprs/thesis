@@ -6,6 +6,7 @@ from itertools import combinations
 import os
 import subprocess
 from dxfwrite import DXFEngine as dxf
+import logging
 
 # Globals to activate debug code
 SHOW_STEPS = False
@@ -291,6 +292,7 @@ def make_random_shape(n_pts, max_output_len=100, scale=500, circ=False):
             valid_shape = True
             return fit_pts, pts
         except ValueError:
+            logging.debug(f"points {pts} did not make a valid shape")
             failcounter += 1
 
 
@@ -363,7 +365,10 @@ def pts_to_dxf(pts, name='test.dxf'):
         curve: the (x,y) points to be converted. Do not duplicate endpoints
         name: filename of output
     """
-    curve = make_shape(pts, max_output_len=300)
+    try:
+        curve = make_shape(pts, max_output_len=300)
+    except ValueError:  # self-intersecting curve
+        logging.info("Wrote a self-intersecting curve to file")
     assert len(curve[0]) == len(curve[1])
     cpts = list(zip(*curve))
     cpts.append(cpts[0]) # duplicate endpoints
@@ -499,12 +504,12 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
             os.chdir('..')
             if not savedata:
                 os.system('rm -r '+folder_path) #BE VERY CAREFUL
-            print(folder_path)
             raise ValueError('Curve did not create a valid object')
         try:
             os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
         except FileNotFoundError:
-            print(f"didn't find {name}.frd in {folder_path}")
+            logging.warning(f"didn't find {name}.frd in {folder_path}. What shape just failed?")
+            breakpoint()
         if not savedata:
             os.chdir('/tmp')
             os.system('rm -r '+folder_path) 
@@ -520,13 +525,7 @@ def fitness(fq_ideal, fq_actual):
     General fitness criteria. Defined here since different applications handle
     the data differently
     """
-    try:
-        assert len(fq_ideal) == len(fq_actual)  # just in case
-    except TypeError:
-        print(fq_actual)
-        print(fq_ideal)
-        print(type(fq_actual))
-        print(type(fq_ideal))
+    assert len(fq_ideal) == len(fq_actual), f"{fq_ideal} and {fq_actual} are different lengths"  # just in case
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
     return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 

@@ -1,2 +1,5 @@
 __pycache__/*
 .devcontainer/*
+data*
+*.log
+.vscode*

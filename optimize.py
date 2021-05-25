@@ -1,11 +1,15 @@
-from __future__ import print_function
-import xy_interpolation as xy
-import numpy as np
-from scipy.optimize import fmin, basinhopping
 from random import random
 import pickle
+import logging
+from pathlib import Path
 
-VERSION = '1.1'
+from coolname import generate_slug
+import numpy as np
+from scipy.optimize import fmin, basinhopping
+
+import xy_interpolation as xy
+
+VERSION = '1.2'
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
 
@@ -38,6 +42,7 @@ class Bell():
         self.method = method
         self.grade = grade
         self.c0 = c0
+        self.name = generate_slug(2)
         
         if self.c0 == None:
             self.ctrlpoints = ctrlpoints
@@ -76,14 +81,19 @@ class Bell():
                 s = xy.make_shape(pts, max_output_len=100)
             fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
             fit = xy.fitness(fq[:n_freq], self.target)
-            print(fit)
+            logging.debug("Bell %s evaluated to fit %s", bell.name, fit)
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
         except ValueError as err:
             # if you give a constant value, the algorithm thinks it's finished
-            print(err)
+            logging.info(f"Points {pts} evaluated to an invalid shape")
             return crosspenalty * (random()+1)
+        finally: # update the iteration counter if it's defined in the main scope
+            try:
+                iter_counter.update()
+            except NameError:
+                pass
 
 
     def findOptimumCurve(self):
@@ -143,14 +153,15 @@ class Bell():
         self.best_fit = min(self.fits)
         self.best_fq = self.fqs[self.fits.index(self.best_fit)]
         
-        pickle.dump(retdict, open('vals.p','wb')) # TODO - account for overwriting
-        pickle.dump(self, open('bell.b','wb'))
+        Path("data").mkdir(exist_ok=True)
+        pickle.dump(retdict, open('data/vals.p','wb')) # TODO - account for overwriting
+        pickle.dump(self, open('data/bell.b','wb'))
         return retdict
     
     def refine(self):
         if self.grade == 'coarse':
             self.grade = 'fine'
-            c0_initial= self.c0  # save for reference
+            c0_initial = self.c0  # save for reference
             self.c0 = self.optpts  # start from the best
             retdict = self.findOptimumCurve()
             self.c0 = c0_initial
@@ -169,6 +180,11 @@ class Bell():
     
 if __name__ == '__main__':
     # This is an example use case
+    import enlighten 
+
+    manager = enlighten.get_manager()
+    logging.basicConfig(filename="test.log", level="INFO")
+
     bell_params = {
     'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
     'ctrlpoints': 6,  # interpolate the bell curve from 6 points
@@ -176,19 +192,42 @@ if __name__ == '__main__':
     'scale': 300,  # initial bell size
     }
     
-    
     minimum_fitness = 0.1  # this is below audible precision
-    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*440  # choose a fundamental (440 Hz) and a set of overtones
-    targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
-    
+    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220  # choose a fundamental (220 Hz) and a set of overtones
+    targets = [target_0 * 2**(n/12.0) for n in range(12)] # chromatic scale multiples
+    attempts = 5  # number of shapes to try for each target
+
+    trg_progress_bar = manager.counter(total=len(targets), unit="targets")
+    iter_counter = manager.counter(unit="iterations")
+    # first, generate some rough guess candidates
     bells = []
+    Path("data").mkdir(exist_ok=True)
     for trg in targets:
-        i = 0
-        while i < 5:  # try a few times
+        attempts_progress_bar = manager.counter(total=attempts, unit='attempts')
+
+        for _ in range(attempts): 
             bell = Bell(trg, **bell_params) # initialize a bell
             bell.findOptimumCurve()  # optimize its shape
             bells.append(bell) 
-            pickle.dump(bells, open('bells.p','wb'))
+            pickle.dump(bells, open('data/bells.p','wb'))
             if bell.best_fit < minimum_fitness: # good enough for now.
                 break
-            i += 1
+
+    trg_progress_bar.update()
+    
+    # find the the closest fit bells for each target
+    finalists = []
+    bells_sorted = [[b for b in bells if b.target == trg] for trg in targets]
+    for sorted_group in bells_sorted:
+        if len(sorted_group) == 0:
+            continue
+        best_yet = sorted_group[0]
+        for bell in sorted_group:
+            if bell.best_fit < best_yet.best_fit:
+                best_yet = bell
+        finalists.append(best_yet)
+    
+    # for each finalist, refine the shape
+    for bell in finalists:
+        bell.refine()
+        pickle.dump(bells, open('bells.p', 'wb'))
