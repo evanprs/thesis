@@ -18,13 +18,13 @@ PLOT_SHAPE = False
 
 
 def smart_mkdir(path):
-    """
+    """/sm
     Args:
         path: path of desired folder
     Returns:
         the path of the actual folder created
     """
-    timestamp = '__{:%Y-%m-%d__%H:%M:%S}'.format(datetime.datetime.now())
+    timestamp = datetime.datetime.now().isoformat()
     path = path + timestamp
     
     if not os.path.exists(path):
@@ -500,7 +500,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
         with open('error.log', 'a') as errorfile, open('test.log', "a") as logfile:
-            make_inp(elastic, density)
+            make_inp(elastic, density, name=name)
             with open(name + '.curve','w') as curvefile:
                 curvefile.write(str(curves))
             curves_to_fbd(curves, name + '.fbd')
@@ -523,7 +523,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
                 os.remove(name+'.frd') # this takes up too much space and can be reproduced later if necessary
             except FileNotFoundError:
                 logging.warning(f"didn't find {name}.frd in {folder_path}. What shape just failed?")
-                breakpoint()
+                raise ValueError("Evaluation failed at solver")
             if not savedata:
                 os.chdir('/tmp')
                 subprocess.run(['rm', '-r', folder_path])

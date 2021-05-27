@@ -3,7 +3,9 @@ import pickle
 import matplotlib.pyplot as plt
 from xy_interpolation import make_shape
 from sounds import *
+import os
 
+os.chdir('data')
 retdict = pickle.load(open('vals.p','rb'))
 allvecs = retdict['allvecs']
 fits = retdict['fits']

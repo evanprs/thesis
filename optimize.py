@@ -2,16 +2,37 @@ from random import random
 import pickle
 import logging
 from pathlib import Path
+import multiprocessing
 
 from coolname import generate_slug
 import numpy as np
 from scipy.optimize import fmin, basinhopping
+import enlighten 
 
 import xy_interpolation as xy
 
 VERSION = '1.2'
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
+
+def dict_append(dictionary, key, listvalue):
+    if key in dictionary.keys():
+        dictionary[key] += listvalue
+    else:
+        dictionary[key] = listvalue
+
+def dict_add(dict1, dict2):
+    """ Merges the contents of dict2 into dict1. All values of both must be lists """
+    for key in dict2:
+        dict_append(dict1, key, dict2[key])
+
+
+def refine_wrapper(bell):
+    # need a function that returns the bell object for multiprocessing
+    # TODO - make this less bad
+    bell.refine()
+    return bell
+
 
 class Bell():
     """
@@ -43,6 +64,7 @@ class Bell():
         self.grade = grade
         self.c0 = c0
         self.name = generate_slug(2)
+        self.eval_count = 0  # track number of evaluations, just for fun
         
         if self.c0 == None:
             self.ctrlpoints = ctrlpoints
@@ -79,9 +101,10 @@ class Bell():
                 s = xy.make_shape(pts, max_output_len=50)
             else:
                 s = xy.make_shape(pts, max_output_len=100)
-            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density)
+            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, name=self.name)
+            if len(fq) == 0: raise ValueError("Simulation failed")
             fit = xy.fitness(fq[:n_freq], self.target)
-            logging.debug("Bell %s evaluated to fit %s", bell.name, fit)
+            logging.debug("Bell %s evaluated to fit %s", self.name, fit)
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
@@ -89,12 +112,8 @@ class Bell():
             # if you give a constant value, the algorithm thinks it's finished
             logging.info(f"Points {pts} evaluated to an invalid shape")
             return crosspenalty * (random()+1)
-        finally: # update the iteration counter if it's defined in the main scope
-            try:
-                iter_counter.update()
-            except NameError:
-                pass
-
+        finally:
+            self.eval_count += 1
 
     def findOptimumCurve(self):
         """
@@ -103,7 +122,7 @@ class Bell():
         Returns:
             optpts (tuple): points (x,y) defining optimized curve
         """
-
+        
         x, y = self.c0
         flatpts = np.append(x, y)
         if self.grade == 'coarse':
@@ -147,17 +166,14 @@ class Bell():
         retdict['target'] = self.target
         retdict['c0'] = self.c0
         self.allvecs = retdict['allvecs']
-        # TODO - this is ridiculous
     
         # isolate best case
         self.best_fit = min(self.fits)
         self.best_fq = self.fqs[self.fits.index(self.best_fit)]
         
-        Path("data").mkdir(exist_ok=True)
-        pickle.dump(retdict, open('data/vals.p','wb')) # TODO - account for overwriting
-        pickle.dump(self, open('data/bell.b','wb'))
         return retdict
-    
+
+
     def refine(self):
         if self.grade == 'coarse':
             self.grade = 'fine'
@@ -176,59 +192,137 @@ class Bell():
             else:
                 s = xy.make_shape(self.optpts, max_output_len=100)
             fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, showshape=True)
-    
-    
-if __name__ == '__main__':
-    # This is an example use case
-    import enlighten 
 
-    manager = enlighten.get_manager()
+
+class Controller():
+    """
+    Controller class for managing process of optimizing targets and loading saved work
+    """
+    def __init__(self):
+        self.candidates = {}
+        self.roughed_candidates = {}
+        self.finished_candidates = {}
+        self.version = VERSION
+
+        # TODO - move to View object
+        # self.progress_manager = enlighten.get_manager() 
+        self.data_path = 'data'
+        Path(self.data_path).mkdir(exist_ok=True)
+        # TODO - account for overwriting
+
+
+    def save_state(self, filename='controller.p'):
+        # save whole state
+        with open(self.data_path / filename,'wb') as outfile:
+            pickle.dump(self, outfile)
+
+
+    def load_state(self, filepath):
+        """
+        Places previous results in memory.
+
+        Args:
+            filepath (str): path to pickle file of previous save
+        """
+        with open(filepath, 'rb') as prev_savefile:
+            prev_ctrl = pickle.load(prev_savefile)
+        assert type(prev_ctrl) == Controller
+        # assert prev_ctrl.version == self.version
+
+        dict_add(self.candidates, prev_ctrl.candidates)
+        dict_add(self.roughed_candidates, prev_ctrl.roughed_candidates)
+        dict_add(self.finished_candidates, prev_ctrl.finished_candidates)
+
+
+    def process_bell(self, bell):
+        bell.findOptimumCurve()  # here's where the work gets done
+        return bell
+
+
+    def make_candidates(self, target, parameters, attempts):
+        """
+        Creates bell objects for target parameters
+        
+        Args:
+            target (array): Frequencies to optimize to
+            parameters (dict): Bell object initialization arguments
+            attempts (int): number of objects to create
+        """    
+        for _ in range(attempts):
+            new_bell = Bell(target, **parameters)
+            dict_append(self.candidates, tuple(target), [new_bell])
+
+            
+    def process_candidates(self, fit_tolerance):
+        """
+        Process all candidates to a given tolerance
+
+        Args:
+            fit_tolerance (float): acceptable fitness upper bound
+        """
+        # TODO - replace 'grade' with 'tolerance', make it a sliding scale
+        if self.candidates == None: return None
+
+        # create a pool for evaluating in parallel
+        pool = multiprocessing.Pool()
+
+        # take a candidate from each target, look for tolerance
+        to_process = []
+        for target in self.candidates.keys():  # note that target is now a tuple, not array
+            if len(self.candidates[target]) > 0:
+                to_process.append(self.candidates[target].pop())
+            coarse_optimized = pool.map(self.process_bell, to_process)
+            for bell in coarse_optimized:
+                dict_append(self.roughed_candidates, target, [bell])
+        
+        self.save_state()
+            
+        
+    def refine_candidates(self):
+        if self.roughed_candidates == None: return None
+
+        finalists = []
+        # find the best candidate for each target, optimize those
+        for target in self.roughed_candidates:
+            cands = self.roughed_candidates[target]
+            best = min(cands, key = lambda c: c.best_fit)  # raises TypeError if best_fit empty
+            finalists.append(best)
+       
+        
+        # run the calculation for all at once
+        pool = multiprocessing.Pool()
+        finished_candidates = pool.map(refine_wrapper, finalists)
+        for cand in finished_candidates:
+            self.finished_candidates[tuple(cand.target)] = cand
+        
+        self.save_state()
+
+
+
+
+if __name__ == '__main__':
+    # TODO - move to controller class
     logging.basicConfig(filename="test.log", level="INFO")
 
-    bell_params = {
-    'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
-    'ctrlpoints': 6,  # interpolate the bell curve from 6 points
-    'grade': 'coarse', # for quick evaluation
-    'scale': 300,  # initial bell size
-    }
+    # base_params = {
+    # 'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
+    # 'ctrlpoints': 6,  # interpolate the bell curve from 6 points
+    # 'grade': 'coarse', # for quick evaluation
+    # 'scale': 300,  # initial bell size
+    # }
+    # attempts = 5
+    # # minimum_fitness = 0.1  # this is below audible precision
+    # target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
+    # # choose a fundamental (220 Hz) and a set of overtones
+    # targets = [target_0 * 2**(n/12.0) for n in range(12)] # chromatic scale multiples
     
-    minimum_fitness = 0.1  # this is below audible precision
-    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220  # choose a fundamental (220 Hz) and a set of overtones
-    targets = [target_0 * 2**(n/12.0) for n in range(1)] # chromatic scale multiples
-    attempts = 5  # number of shapes to try for each target
-
-    trg_progress_bar = manager.counter(total=len(targets), unit="targets")
-    iter_counter = manager.counter(unit="iterations")
-    # first, generate some rough guess candidates
-    bells = []
-    Path("data").mkdir(exist_ok=True)
-    for trg in targets:
-        attempts_progress_bar = manager.counter(total=attempts, unit='attempts')
-
-        for _ in range(attempts): 
-            bell = Bell(trg, **bell_params) # initialize a bell
-            bell.findOptimumCurve()  # optimize its shape
-            bells.append(bell) 
-            pickle.dump(bells, open('data/bells.p','wb'))
-            if bell.best_fit < minimum_fitness: # good enough for now.
-                break
-            attempts_progress_bar.update()
-
-    trg_progress_bar.update()
+    # # Create controller object, add candidates
+    # controller = Controller()
+    # for target in targets:
+    #     controller.make_candidates(target, base_params, attempts)
     
-    # find the the closest fit bells for each target
-    finalists = []
-    bells_sorted = [[b for b in bells if all(b.target == trg)] for trg in targets]
-    for sorted_group in bells_sorted:
-        if len(sorted_group) == 0:
-            continue
-        best_yet = sorted_group[0]
-        for bell in sorted_group:
-            if bell.best_fit < best_yet.best_fit:
-                best_yet = bell
-        finalists.append(best_yet)
-    
-    # for each finalist, refine the shape
-    for bell in finalists:
-        bell.refine()
-        pickle.dump(bells, open('bells.p', 'wb'))
+    # controller.process_candidates(1.0)
+
+    c = Controller()
+    c.load_state('controller.p')
+    c.refine_candidates()
