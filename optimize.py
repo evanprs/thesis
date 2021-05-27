@@ -1,4 +1,4 @@
-from random import random
+import random
 import pickle
 import logging
 from pathlib import Path
@@ -30,6 +30,7 @@ def dict_add(dict1, dict2):
 def refine_wrapper(bell):
     # need a function that returns the bell object for multiprocessing
     # TODO - make this less bad
+    random.seed(multiprocessing.current_process().pid)  # need to seed random to avoid file collisions 
     bell.refine()
     return bell
 
@@ -111,7 +112,7 @@ class Bell():
         except ValueError as err:
             # if you give a constant value, the algorithm thinks it's finished
             logging.info(f"Points {pts} evaluated to an invalid shape")
-            return crosspenalty * (random()+1)
+            return crosspenalty * (random.random()+1)
         finally:
             self.eval_count += 1
 
@@ -206,9 +207,9 @@ class Controller():
 
         # TODO - move to View object
         # self.progress_manager = enlighten.get_manager() 
-        self.data_path = 'data'
-        Path(self.data_path).mkdir(exist_ok=True)
-        # TODO - account for overwriting
+        Path('data').mkdir(exist_ok=True)
+        self.data_path = Path('data') / generate_slug(2)
+        Path(self.data_path).mkdir()
 
 
     def save_state(self, filename='controller.p'):
@@ -263,19 +264,24 @@ class Controller():
         # TODO - replace 'grade' with 'tolerance', make it a sliding scale
         if self.candidates == None: return None
 
-        # create a pool for evaluating in parallel
-        pool = multiprocessing.Pool()
+        while any([len(cands) > 0 for cands in list(self.candidates)]):
+            # take one candidate from each target
+            to_process = []
+            for target in self.candidates.keys():  # note that target is now a tuple, not array
+                if len(self.candidates[target]) > 0:
+                    to_process.append(self.candidates[target].pop())
 
-        # take a candidate from each target, look for tolerance
-        to_process = []
-        for target in self.candidates.keys():  # note that target is now a tuple, not array
-            if len(self.candidates[target]) > 0:
-                to_process.append(self.candidates[target].pop())
-            coarse_optimized = pool.map(self.process_bell, to_process)
+            # do the work
+            with multiprocessing.Pool() as pool:
+                coarse_optimized = pool.map(self.process_bell, to_process)
+
             for bell in coarse_optimized:
+                target = tuple(bell.target)
+                if bell.best_fit < fit_tolerance: # found a good enough candidate, ignore the rest
+                    self.candidates[target] = []
                 dict_append(self.roughed_candidates, target, [bell])
-        
-        self.save_state()
+            
+            self.save_state()
             
         
     def refine_candidates(self):
@@ -304,25 +310,22 @@ if __name__ == '__main__':
     # TODO - move to controller class
     logging.basicConfig(filename="test.log", level="INFO")
 
-    # base_params = {
-    # 'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
-    # 'ctrlpoints': 6,  # interpolate the bell curve from 6 points
-    # 'grade': 'coarse', # for quick evaluation
-    # 'scale': 300,  # initial bell size
-    # }
-    # attempts = 5
-    # # minimum_fitness = 0.1  # this is below audible precision
-    # target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
-    # # choose a fundamental (220 Hz) and a set of overtones
-    # targets = [target_0 * 2**(n/12.0) for n in range(12)] # chromatic scale multiples
+    base_params = {
+    'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
+    'ctrlpoints': 6,  # interpolate the bell curve from 6 points
+    'grade': 'coarse', # for quick evaluation
+    'scale': 300,  # initial bell size
+    }
+    attempts = 5
+    # minimum_fitness = 0.1  # this is below audible precision
+    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
+    # choose a fundamental (220 Hz) and a set of overtones
+    targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
     
-    # # Create controller object, add candidates
-    # controller = Controller()
-    # for target in targets:
-    #     controller.make_candidates(target, base_params, attempts)
+    # Create controller object, add candidates
+    controller = Controller()
+    for target in targets:
+        controller.make_candidates(target, base_params, attempts)
     
-    # controller.process_candidates(1.0)
-
-    c = Controller()
-    c.load_state('controller.p')
-    c.refine_candidates()
+    controller.process_candidates(1.0)
+    controller.refine_candidates()
