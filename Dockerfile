@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y \
  && rm -r * \
  && cd ~/thesis \
  && pip install -r requirements.txt \
- && apt-get remove -y wget python3-pip \
  && apt-get -y autoremove 
 CMD /bin/bash
+
+# leaving this in for debugging
+#  && apt-get remove -y wget python3-pip \

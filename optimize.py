@@ -7,7 +7,8 @@ import multiprocessing
 from coolname import generate_slug
 import numpy as np
 from scipy.optimize import fmin, basinhopping
-import enlighten 
+import tqdm
+import multiprocessing_logging # TODO - this library only works on POSIX
 
 import xy_interpolation as xy
 
@@ -106,6 +107,7 @@ class Bell():
             if len(fq) == 0: raise ValueError("Simulation failed")
             fit = xy.fitness(fq[:n_freq], self.target)
             logging.debug("Bell %s evaluated to fit %s", self.name, fit)
+            multiprocessing_logging.install_mp_handler()
             self.fits.append(fit)
             self.fqs.append(fq)
             return fit
@@ -205,6 +207,8 @@ class Controller():
         self.finished_candidates = {}
         self.version = VERSION
 
+        logging.basicConfig(filename="test.log", level="INFO")
+
         # TODO - move to View object
         # self.progress_manager = enlighten.get_manager() 
         Path('data').mkdir(exist_ok=True)
@@ -212,31 +216,34 @@ class Controller():
         Path(self.data_path).mkdir()
 
 
-    def save_state(self, filename='controller.p'):
+    def save(self, filename='controller.p'):
         # save whole state
         with open(self.data_path / filename,'wb') as outfile:
             pickle.dump(self, outfile)
 
 
-    def load_state(self, filepath):
+    def load(self, filepath, append=False):
         """
         Places previous results in memory.
 
         Args:
             filepath (str): path to pickle file of previous save
+            append (bool): if True, will attempt to append members rather than overwrite
         """
         with open(filepath, 'rb') as prev_savefile:
             prev_ctrl = pickle.load(prev_savefile)
         assert type(prev_ctrl) == Controller
         # assert prev_ctrl.version == self.version
-
-        dict_add(self.candidates, prev_ctrl.candidates)
-        dict_add(self.roughed_candidates, prev_ctrl.roughed_candidates)
-        dict_add(self.finished_candidates, prev_ctrl.finished_candidates)
-
+        if append:
+            dict_add(self.candidates, prev_ctrl.candidates)
+            dict_add(self.roughed_candidates, prev_ctrl.roughed_candidates)
+            dict_add(self.finished_candidates, prev_ctrl.finished_candidates)
+        else:
+            self.__dict__.update(prev_ctrl.__dict__)
 
     def process_bell(self, bell):
-        bell.findOptimumCurve()  # here's where the work gets done
+        # Wrapper since multiprocessing needs to return modified object
+        bell.findOptimumCurve() 
         return bell
 
 
@@ -264,6 +271,8 @@ class Controller():
         # TODO - replace 'grade' with 'tolerance', make it a sliding scale
         if self.candidates == None: return None
 
+        logging.info("started processing candidates")
+
         while any([len(cands) > 0 for cands in list(self.candidates)]):
             # take one candidate from each target
             to_process = []
@@ -273,7 +282,7 @@ class Controller():
 
             # do the work
             with multiprocessing.Pool() as pool:
-                coarse_optimized = pool.map(self.process_bell, to_process)
+                coarse_optimized = list(tqdm.tqdm(pool.imap(self.process_bell, to_process), total=len(to_process)))
 
             for bell in coarse_optimized:
                 target = tuple(bell.target)
@@ -281,35 +290,36 @@ class Controller():
                     self.candidates[target] = []
                 dict_append(self.roughed_candidates, target, [bell])
             
-            self.save_state()
+            self.save()
             
         
     def refine_candidates(self):
         if self.roughed_candidates == None: return None
 
-        finalists = []
+        logging.info("started refining candidates")
+
         # find the best candidate for each target, optimize those
+        finalists = []
         for target in self.roughed_candidates:
             cands = self.roughed_candidates[target]
             best = min(cands, key = lambda c: c.best_fit)  # raises TypeError if best_fit empty
             finalists.append(best)
-       
+
+        for bell in finalists: 
+            logging.info(f"our finalist is {bell.name} with fit {bell.best_fit}")
         
         # run the calculation for all at once
         pool = multiprocessing.Pool()
-        finished_candidates = pool.map(refine_wrapper, finalists)
+        finished_candidates = list(tqdm.tqdm(pool.imap(self.process_bell, finalists), total=len(finalists)))
         for cand in finished_candidates:
             self.finished_candidates[tuple(cand.target)] = cand
         
-        self.save_state()
+        self.save()
 
 
 
 
 if __name__ == '__main__':
-    # TODO - move to controller class
-    logging.basicConfig(filename="test.log", level="INFO")
-
     base_params = {
     'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
     'ctrlpoints': 6,  # interpolate the bell curve from 6 points
@@ -328,4 +338,7 @@ if __name__ == '__main__':
         controller.make_candidates(target, base_params, attempts)
     
     controller.process_candidates(1.0)
-    controller.refine_candidates()
+    
+    controller = Controller()
+    controller.load('cont_done.p')
+    

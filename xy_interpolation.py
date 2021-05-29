@@ -1,6 +1,5 @@
 import datetime
 from multiprocessing import cpu_count
-from posix import environ
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -18,7 +17,7 @@ PLOT_SHAPE = False
 
 
 def smart_mkdir(path):
-    """/sm
+    """
     Args:
         path: path of desired folder
     Returns:
@@ -541,7 +540,7 @@ def fitness(fq_ideal, fq_actual):
     assert len(fq_ideal) == len(fq_actual), f"{fq_ideal} and {fq_actual} are different lengths"  # just in case
     fq_id = np.array(fq_ideal)
     fq_ac = np.array(fq_actual)
-    return np.mean((fq_id - fq_ac)**2 / fq_id)  # chi square 
+    return np.mean((fq_id - fq_ac) / fq_id)  # mean error fraction 
 
 
 if __name__ == "__main__":
