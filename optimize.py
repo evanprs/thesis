@@ -83,13 +83,14 @@ class Bell():
 
         
         
-    def evalFitness(self, flatpts, crosspenalty=100.0*1000):
+    def evalFitness(self, flatpts, crosspenalty=100.0, progress_dict=None):
         """
         Fitness of points defining curve. Needs flattened points for use with fmin
 
         Args:
             flatpts (np.array): flattened points [x1,x2,...y1,y2,...] defining curve
             crosspenalty (float): value to return if curve is self-intersecting
+            progress_dict (dict): shared dictionary for tracking progress during multiprocessing 
 
         Returns:
             fitness (float): RSS of frequencies if valid, crosspenalty if not
@@ -113,7 +114,7 @@ class Bell():
             return fit
         except ValueError as err:
             # if you give a constant value, the algorithm thinks it's finished
-            logging.info(f"Points {pts} evaluated to an invalid shape")
+            logging.debug(f"Points {pts} evaluated to an invalid shape")
             return crosspenalty * (random.random()+1)
         finally:
             self.eval_count += 1
@@ -129,11 +130,11 @@ class Bell():
         x, y = self.c0
         flatpts = np.append(x, y)
         if self.grade == 'coarse':
-            ftol = 1.0
-            xtol = 1.0
+            ftol = 0.1
+            xtol = 25
         else:
-            ftol = .1
-            xtol = .1
+            ftol = 0.0  # mean relative error
+            xtol = 5  # tolerance in mm
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
@@ -207,7 +208,9 @@ class Controller():
         self.finished_candidates = {}
         self.version = VERSION
 
-        logging.basicConfig(filename="test.log", level="INFO")
+        logging.basicConfig(filename="test.log",
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+         level="INFO")
 
         # TODO - move to View object
         # self.progress_manager = enlighten.get_manager() 
@@ -243,6 +246,7 @@ class Controller():
 
     def process_bell(self, bell):
         # Wrapper since multiprocessing needs to return modified object
+        random.seed(multiprocessing.current_process().pid)  # need to seed random to avoid file collisions 
         bell.findOptimumCurve() 
         return bell
 
@@ -282,7 +286,7 @@ class Controller():
 
             # do the work
             with multiprocessing.Pool() as pool:
-                coarse_optimized = list(tqdm.tqdm(pool.imap(self.process_bell, to_process), total=len(to_process)))
+                coarse_optimized = list(pool.imap(self.process_bell, to_process), total=len(to_process))
 
             for bell in coarse_optimized:
                 target = tuple(bell.target)
@@ -310,7 +314,7 @@ class Controller():
         
         # run the calculation for all at once
         pool = multiprocessing.Pool()
-        finished_candidates = list(tqdm.tqdm(pool.imap(self.process_bell, finalists), total=len(finalists)))
+        finished_candidates = list(tqdm.tqdm(pool.imap(refine_wrapper, finalists), total=len(finalists)))
         for cand in finished_candidates:
             self.finished_candidates[tuple(cand.target)] = cand
         
@@ -320,25 +324,27 @@ class Controller():
 
 
 if __name__ == '__main__':
-    base_params = {
-    'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
-    'ctrlpoints': 6,  # interpolate the bell curve from 6 points
-    'grade': 'coarse', # for quick evaluation
-    'scale': 300,  # initial bell size
-    }
-    attempts = 5
-    # minimum_fitness = 0.1  # this is below audible precision
-    target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
-    # choose a fundamental (220 Hz) and a set of overtones
-    targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
+    # base_params = {
+    # 'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
+    # 'ctrlpoints': 6,  # interpolate the bell curve from 6 points
+    # 'grade': 'coarse', # for quick evaluation
+    # 'scale': 300,  # initial bell size
+    # }
+    # attempts = 5
+    # # minimum_fitness = 0.1  # this is below audible precision
+    # target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
+    # # choose a fundamental (220 Hz) and a set of overtones
+    # targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
     
-    # Create controller object, add candidates
-    controller = Controller()
-    for target in targets:
-        controller.make_candidates(target, base_params, attempts)
+    # # Create controller object, add candidates
+    # controller = Controller()
+    # for target in targets:
+    #     controller.make_candidates(target, base_params, attempts)
     
-    controller.process_candidates(1.0)
+    # controller.process_candidates(0.1)
+    # controller.refine_candidates()
     
     controller = Controller()
     controller.load('cont_done.p')
+    controller.refine_candidates()
     
