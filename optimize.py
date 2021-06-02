@@ -1,8 +1,10 @@
+from operator import mul
 import random
 import pickle
 import logging
 from pathlib import Path
 import multiprocessing
+from typing import final
 
 from coolname import generate_slug
 import numpy as np
@@ -15,6 +17,31 @@ import xy_interpolation as xy
 VERSION = '1.2'
 
 unflatten = lambda flatpts: [flatpts[:len(flatpts) // 2],  flatpts[len(flatpts) // 2:]]
+flatten = lambda lss: [item for sublist in lss for item in sublist]
+
+def get_candidate(process_dict):
+    """
+    Returns a random candidate from a dict of candidates indexed by target
+
+    Args:
+        process_dict (dict (key -> list))
+
+    Returns:
+        candidate
+    """
+
+    if len(flatten(process_dict.values())) == 0:  #  if dict is empty, we're done
+        return None
+
+    # no empty sublists allowed. Any process popping from sublists should ensure this
+    assert all([len(process_dict[trg]) > 0 for trg in process_dict]) 
+    
+    target = random.choice(list(process_dict.keys()))
+    candidate = process_dict[target].pop()
+    if len(process_dict[target]) == 0:
+        del process_dict[target] # make sure we've got no empty sublists
+    return candidate
+
 
 def dict_append(dictionary, key, listvalue):
     if key in dictionary.keys():
@@ -31,8 +58,10 @@ def dict_add(dict1, dict2):
 def refine_wrapper(bell):
     # need a function that returns the bell object for multiprocessing
     # TODO - make this less bad
+    logging.info(f"started refining bell {bell.name} with initial fit {bell.best_fit}")
     random.seed(multiprocessing.current_process().pid)  # need to seed random to avoid file collisions 
     bell.refine()
+    logging.info(f"finished refining bell {bell.name} with final fit {bell.best_fit}")
     return bell
 
 
@@ -131,14 +160,14 @@ class Bell():
         flatpts = np.append(x, y)
         if self.grade == 'coarse':
             ftol = 0.1
-            xtol = 25
+            xtol =  10
         else:
-            ftol = 0.0  # mean relative error
-            xtol = 5  # tolerance in mm
+            ftol = 0.005  # mean relative error between evaluations
+            xtol = 2  # tolerance in mm between evaluations
         
         if self.method == 'simplex':
             retvals = fmin(lambda pts: self.evalFitness(pts), flatpts, 
-                disp=True, xtol=xtol, ftol=ftol, retall=True, maxiter=300)
+                disp=False, xtol=xtol, ftol=ftol, retall=True, maxiter=300)
        
         elif self.method == 'basinhopping':
             def test(f_new, x_new, f_old, x_old):
@@ -164,7 +193,6 @@ class Bell():
         x = outpts[:len(outpts) // 2]
         y = outpts[len(outpts) // 2:]
         self.optpts = (x, y)
-        print(self.optpts)
     
         retdict['optpts'] = self.optpts # for redundancy 
         retdict['target'] = self.target
@@ -206,16 +234,15 @@ class Controller():
         self.candidates = {}
         self.roughed_candidates = {}
         self.finished_candidates = {}
+        self.name = generate_slug(2)
         self.version = VERSION
 
         logging.basicConfig(filename="test.log",
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        format='%(asctime)s %(levelname)-8s %(message)s',
          level="INFO")
 
-        # TODO - move to View object
-        # self.progress_manager = enlighten.get_manager() 
         Path('data').mkdir(exist_ok=True)
-        self.data_path = Path('data') / generate_slug(2)
+        self.data_path = Path('data') / self.name
         Path(self.data_path).mkdir()
 
 
@@ -247,7 +274,9 @@ class Controller():
     def process_bell(self, bell):
         # Wrapper since multiprocessing needs to return modified object
         random.seed(multiprocessing.current_process().pid)  # need to seed random to avoid file collisions 
+        logging.info(f"started processing bell {bell.name}")
         bell.findOptimumCurve() 
+        logging.info(f"bell {bell.name} finished with fit {bell.best_fit}")
         return bell
 
 
@@ -274,24 +303,28 @@ class Controller():
         """
         # TODO - replace 'grade' with 'tolerance', make it a sliding scale
         if self.candidates == None: return None
-
+  
         logging.info("started processing candidates")
+        num_workers = multiprocessing.cpu_count()
 
         while any([len(cands) > 0 for cands in list(self.candidates)]):
             # take one candidate from each target
-            to_process = []
-            for target in self.candidates.keys():  # note that target is now a tuple, not array
-                if len(self.candidates[target]) > 0:
-                    to_process.append(self.candidates[target].pop())
+            args = []
+            # get up to num_workers candidates to process
+            for _ in range(num_workers):
+                if (arg := get_candidate(self.candidates)) != None:
+                    args.append(arg) 
 
             # do the work
             with multiprocessing.Pool() as pool:
-                coarse_optimized = list(pool.imap(self.process_bell, to_process), total=len(to_process))
+                results = pool.map(self.process_bell, args)
 
-            for bell in coarse_optimized:
+            # if we found a good enough candidate, ignore the rest
+            for bell in results:
                 target = tuple(bell.target)
-                if bell.best_fit < fit_tolerance: # found a good enough candidate, ignore the rest
-                    self.candidates[target] = []
+                if bell.best_fit < fit_tolerance: 
+                    logging.info(f"target {bell.target} found an adequate fit!")
+                    self.candidates.pop(target, None)
                 dict_append(self.roughed_candidates, target, [bell])
             
             self.save()
@@ -305,20 +338,30 @@ class Controller():
         # find the best candidate for each target, optimize those
         finalists = []
         for target in self.roughed_candidates:
-            cands = self.roughed_candidates[target]
-            best = min(cands, key = lambda c: c.best_fit)  # raises TypeError if best_fit empty
+            # will raise TypeError if best_fit empty
+            best = min(self.roughed_candidates[target], key = lambda c: c.best_fit) 
+            logging.info(f"our finalist is {best.name} with fit {best.best_fit}")
             finalists.append(best)
 
-        for bell in finalists: 
-            logging.info(f"our finalist is {bell.name} with fit {bell.best_fit}")
-        
-        # run the calculation for all at once
-        pool = multiprocessing.Pool()
-        finished_candidates = list(tqdm.tqdm(pool.imap(refine_wrapper, finalists), total=len(finalists)))
-        for cand in finished_candidates:
-            self.finished_candidates[tuple(cand.target)] = cand
-        
-        self.save()
+        num_workers = multiprocessing.cpu_count()
+        while len(finalists) > 0:
+            # pop a batch to process
+            to_process = []
+            for _ in range(num_workers):
+                if len(finalists) > 0:
+                    to_process.append(finalists.pop())
+            
+
+            # do the work
+            logging.info(f"Started refining: {[b.name for b in to_process]}")
+            with multiprocessing.Pool(num_workers) as pool:
+                finished_candidates = pool.map(refine_wrapper, to_process)
+            
+            for cand in finished_candidates:
+                self.finished_candidates[tuple(cand.target)] = cand
+            
+            self.save()
+            logging.info('finished refining!')
 
 
 
@@ -341,8 +384,8 @@ if __name__ == '__main__':
     # for target in targets:
     #     controller.make_candidates(target, base_params, attempts)
     
-    # controller.process_candidates(0.1)
-    # controller.refine_candidates()
+    # controller.process_candidates(0.01)
+    # # controller.refine_candidates()
     
     controller = Controller()
     controller.load('cont_done.p')
