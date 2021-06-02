@@ -385,7 +385,7 @@ def pts_to_dxf(pts, name='test.dxf'):
 
 
 
-def make_inp(elastic='69000e6,0.33', density=0.002712, freqs=14, name='test'):
+def make_inp(elastic='69000e6,0.33', density=0.002712, freqs=8, name='test'):
     """ Creates a .inp file for cgx which sets material parameters.
     Defaults chosen for 6061 Al.
     
@@ -395,7 +395,7 @@ def make_inp(elastic='69000e6,0.33', density=0.002712, freqs=14, name='test'):
         density (float): density of material in kg/cm^3
         name (str): .inp filename
     """
-    
+    freqs += 6  # the first 6 freqs are null and get removed
     inptext = '''
     *include, input=all.msh
     *MATERIAL,NAME=Al
@@ -463,7 +463,7 @@ def parse_dat(path):
     return (fq, pf, mm)
 
 
-def find_eigenmodes(curves, elastic, density, showshape=False, name='test', savedata=False):
+def find_eigenmodes(curves, elastic, density, n_freqs=8, showshape=False, name='test', savedata=False):
     '''
     Use the cgx/ccx FEM solver to find the eigenmodes of a plate
     Units of curve and thickness are in mm
@@ -472,6 +472,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         curves [(curve, thick), ...]: list of curves and thicknesses, bottom to top
             curve: the (x,y) points to be converted. Do not duplicate endpoints
             thick: the thickness of the desired solid
+        n_freqs (int): number of frequencies to evaluate
         showshape (bool): if True, cgx will show the deformed result
         name (string): name of the folder to be created
     Returns:
@@ -499,7 +500,7 @@ def find_eigenmodes(curves, elastic, density, showshape=False, name='test', save
         folder_path = smart_mkdir(name)
         os.chdir(folder_path)
         with open('error.log', 'a') as errorfile, open('test.log', "a") as logfile:
-            make_inp(elastic, density, name=name)
+            make_inp(elastic, density, freqs=n_freqs, name=name)
             with open(name + '.curve','w') as curvefile:
                 curvefile.write(str(curves))
             curves_to_fbd(curves, name + '.fbd')

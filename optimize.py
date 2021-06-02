@@ -133,7 +133,7 @@ class Bell():
                 s = xy.make_shape(pts, max_output_len=50)
             else:
                 s = xy.make_shape(pts, max_output_len=100)
-            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, name=self.name)
+            fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, n_freqs=n_freq, name=self.name)
             if len(fq) == 0: raise ValueError("Simulation failed")
             fit = xy.fitness(fq[:n_freq], self.target)
             logging.debug("Bell %s evaluated to fit %s", self.name, fit)
@@ -200,8 +200,11 @@ class Bell():
         self.allvecs = retdict['allvecs']
     
         # isolate best case
-        self.best_fit = min(self.fits)
-        self.best_fq = self.fqs[self.fits.index(self.best_fit)]
+        try:
+            self.best_fit = min(self.fits)
+            self.best_fq = self.fqs[self.fits.index(self.best_fit)]
+        except ValueError:
+            breakpoint()
         
         return retdict
 
@@ -367,27 +370,23 @@ class Controller():
 
 
 if __name__ == '__main__':
-    # base_params = {
-    # 'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
-    # 'ctrlpoints': 6,  # interpolate the bell curve from 6 points
-    # 'grade': 'coarse', # for quick evaluation
-    # 'scale': 300,  # initial bell size
-    # }
-    # attempts = 5
-    # # minimum_fitness = 0.1  # this is below audible precision
-    # target_0 = np.array([ 0.5,  1. ,  1.2,  1.5,  1.8,  2. ])*220 
-    # # choose a fundamental (220 Hz) and a set of overtones
-    # targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
+    base_params = {
+    'thickness': 6.35,   # choose a thickness of 1/4" (=6.35 mm)
+    'ctrlpoints': 6,  # interpolate the bell curve from 6 points
+    'grade': 'coarse', # for quick evaluation
+    'scale': 300,  # initial bell size
+    }
+    attempts = 5
+    # minimum_fitness = 0.1  # this is below audible precision
+    target_0 = np.array([ 0.5,  1. ,  1.26,  1.5,   2. ])*220 
+    # choose a fundamental (220 Hz) and a set of overtones
+    targets = [target_0 * 2**(n/12.0) for n in range(13)] # chromatic scale multiples
     
-    # # Create controller object, add candidates
-    # controller = Controller()
-    # for target in targets:
-    #     controller.make_candidates(target, base_params, attempts)
-    
-    # controller.process_candidates(0.01)
-    # # controller.refine_candidates()
-    
+    # Create controller object, add candidates
     controller = Controller()
-    controller.load('cont_done.p')
+    for target in targets:
+        controller.make_candidates(target, base_params, attempts)
+    
+    controller.process_candidates(0.02)
     controller.refine_candidates()
     
