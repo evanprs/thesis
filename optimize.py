@@ -7,6 +7,7 @@ import multiprocessing
 from typing import final
 
 from coolname import generate_slug
+from matplotlib.pyplot import plot
 import numpy as np
 from scipy.optimize import fmin, basinhopping
 import tqdm
@@ -228,6 +229,80 @@ class Bell():
                 s = xy.make_shape(self.optpts, max_output_len=100)
             fq, _, _ = xy.find_eigenmodes([(s, self.thickness)], self.elastic, self.density, showshape=True)
 
+    def output(self, path="outputs", outputs=["dxf", "report", "image", "pickle"]):
+        """
+        Writes useful properties of bell to disk
+
+        Args:
+            path (str): folder path in which to create output directory
+            outputs (str list): list of files to output
+                dxf: dxf file of outline
+                report: text file with summary statistics
+                image: plot of outline
+                pickle: pickle file of bell
+        """
+        Path(path).mkdir(exist_ok=True) 
+        out_dir = Path(path) / self.name
+        out_dir.mkdir(exist_ok=True)
+
+
+        try:
+            note = self.note
+        except:
+            # not necessarily defined
+            note = None
+
+        if "dxf" in outputs:
+            dxf_path = out_dir / f"{self.name}.dxf"
+            xy.pts_to_dxf(self.optpts, name=dxf_path)
+        
+        if "report" in outputs:
+            report_text = f"""~~~~~~~ BELL INFO ~~~~~~~~
+name: {self.name}
+
+------ MATERIAL PROPERTIES ------
+thickness (mm): {self.thickness}
+young's modulus (Pa): {self.elastic.split(",")[0]}
+Poisson's ratio: {self.elastic.split(",")[1]}
+density (kg/cm^3): {self.density}
+
+------ RESULTS ------
+target freqs (ratio to fundamental): {self.target / self.target[0]}
+target freqs (Hz): {self.target}
+resulting freqs (Hz): {self.best_fq}
+mean error (%): {self.best_fit * 100}
+"""         
+            if note != None:
+                report_text += f"\nnote: {note}"
+
+            with open(out_dir / f"{self.name}.txt", "w") as text_file:
+                text_file.write(report_text)
+        
+        if "image" in outputs:
+            import matplotlib.pyplot as plt
+
+            if note != None:
+                title = f"{self.name}  ---  Note: {self.note}"
+            else:
+                title = self.name
+
+            shape = xy.make_shape(self.optpts, max_output_len=300)
+            fig, ax = plt.subplots()
+            ax.plot(*shape)
+            ax.set_title(title)
+            ax.set_aspect('equal', 'datalim')
+            with open(out_dir / f'{self.name}.png', 'wb') as image_file:
+                plt.savefig(image_file)
+            plt.clf()
+
+        if "pickle" in outputs:
+            with open(out_dir / f"{self.name}.p", 'wb') as pickle_file:
+                pickle.dump(self, pickle_file)
+        
+
+
+            
+
 
 class Controller():
     """
@@ -376,7 +451,7 @@ if __name__ == '__main__':
     'grade': 'coarse', # for quick evaluation
     'scale': 300,  # initial bell size
     }
-    attempts = 5
+    attempts = 20
     # minimum_fitness = 0.1  # this is below audible precision
     target_0 = np.array([ 0.5,  1. ,  1.26,  1.5,   2. ])*220 
     # choose a fundamental (220 Hz) and a set of overtones
